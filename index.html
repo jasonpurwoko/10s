@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10s — Tennis Tracker</title>
+  <style>
+    :root {
+      --bg: #1a1a1a;
+      --surface: #242424;
+      --surface2: #2e2e2e;
+      --border: #3a3a3a;
+      --text: #e8e8e8;
+      --text-muted: #888;
+      --accent: #3db88c;
+      --accent-dim: rgba(61, 184, 140, 0.12);
+      --green: #3db88c;
+      --green-dim: #2a4a3e;
+      --blue: #5b8af0;
+      --purple: #9b6ef0;
+      --orange: #e89b4e;
+      --red: #e85b5b;
+      --radius: 10px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 14px;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      z-index: 100;
+    }
+
+    .logo { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .logo span { color: var(--accent); }
+    .logo-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 28px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    nav { display: flex; flex-direction: column; gap: 2px; }
+    nav button {
+      background: none; border: none; color: var(--text-muted); font-size: 13px;
+      padding: 9px 12px; border-radius: 7px; cursor: pointer; text-align: left;
+      display: flex; align-items: center; gap: 9px; transition: all 0.15s; font-family: inherit;
+    }
+    nav button:hover { background: var(--surface2); color: var(--text); }
+    nav button.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    nav button svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Main */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      padding: 28px 36px;
+      max-width: 1000px;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+
+    /* Dashboard Header */
+    .dash-header {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    /* Stat Cards Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .stat-card .label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-card .value { font-size: 30px; font-weight: 700; line-height: 1.1; }
+    .stat-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    /* Dashboard 2x2 Grid */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+
+    /* Skill Ratings */
+    .skill-row { display: flex; align-items: center; margin-bottom: 10px; }
+    .skill-row:last-of-type { margin-bottom: 0; }
+    .skill-label { width: 80px; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+    .skill-bar-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; margin-right: 12px; overflow: hidden; }
+    .skill-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .skill-val { font-size: 13px; font-weight: 600; width: 28px; text-align: right; }
+
+    .card-action {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 16px;
+      font-size: 12px; color: var(--text); background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+    }
+    .card-action:hover { background: var(--border); }
+
+    /* Streak Circles */
+    .streak-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+    .streak-grid { display: grid; grid-template-columns: repeat(14, 1fr); gap: 5px; margin-bottom: 14px; }
+    .streak-dot { aspect-ratio: 1; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); }
+    .streak-dot.filled { background: var(--accent); border-color: var(--accent); }
+    .streak-dot.today { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+    .streak-stats { font-size: 12px; color: var(--text-muted); }
+    .streak-stats strong { color: var(--text); font-weight: 700; }
+
+    /* Recent Sessions */
+    .session-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s;
+    }
+    .session-row:last-of-type { border-bottom: none; }
+    .session-row:hover { opacity: 0.7; }
+    .session-row .name { font-size: 13px; font-weight: 500; }
+    .session-row .date { font-size: 12px; color: var(--text-muted); width: 60px; text-align: center; }
+    .session-row .dur { font-size: 12px; color: var(--text-muted); text-align: right; width: 55px; }
+    .session-row .vid-badge {
+      font-size: 10px; background: var(--purple); color: #fff; padding: 2px 6px;
+      border-radius: 3px; margin-left: 6px; font-weight: 600;
+    }
+
+    /* Goals */
+    .goal-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .goal-row:last-of-type { border-bottom: none; }
+    .goal-text { font-size: 13px; }
+    .goal-badge { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; text-transform: lowercase; white-space: nowrap; }
+    .goal-badge.in-progress { background: rgba(91, 138, 240, 0.15); color: var(--blue); }
+    .goal-badge.done { background: rgba(61, 184, 140, 0.15); color: var(--green); }
+    .goal-badge.not-started { background: var(--surface2); color: var(--text-muted); }
+    .goal-badge.counter { background: var(--surface2); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    /* ---------- Session Detail ---------- */
+    .detail-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-muted); font-size: 13px; cursor: pointer;
+      margin-bottom: 16px; background: none; border: none; font-family: inherit;
+    }
+    .detail-back:hover { color: var(--text); }
+    .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+    .detail-header h1 { margin-bottom: 4px; }
+    .detail-meta { font-size: 13px; color: var(--text-muted); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .detail-field .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .detail-field .value { font-size: 15px; font-weight: 500; }
+
+    .tag { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .tag-practice { background: rgba(91, 138, 240, 0.15); color: var(--blue); }
+    .tag-match { background: rgba(232, 91, 91, 0.15); color: var(--red); }
+    .tag-lesson { background: rgba(232, 155, 78, 0.15); color: var(--orange); }
+    .tag-drill { background: rgba(61, 184, 140, 0.15); color: var(--green); }
+
+    .rating { display: flex; gap: 3px; }
+    .rating .star { color: var(--border); font-size: 16px; }
+    .rating .star.filled { color: var(--accent); }
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .skill-tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--surface2); color: var(--text-muted); }
+
+    /* ---------- Log Form ---------- */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 0; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    .form-group label {
+      display: block; font-size: 11px; color: var(--text-muted);
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 12px; color: var(--text);
+      font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.15s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    .btn {
+      background: var(--accent); color: var(--bg); border: none;
+      padding: 9px 18px; border-radius: 7px; font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: opacity 0.15s; font-family: inherit;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: rgba(232, 91, 91, 0.15); color: var(--red); }
+    .btn-row { display: flex; gap: 10px; margin-top: 18px; align-items: center; }
+
+    .rating-input { display: flex; gap: 3px; }
+    .rating-input .star {
+      font-size: 20px; cursor: pointer; color: var(--border);
+      background: none; border: none; transition: color 0.1s;
+    }
+    .rating-input .star.filled { color: var(--accent); }
+    .rating-input .star:hover { color: var(--accent); }
+
+    /* ---------- Video Upload ---------- */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .upload-icon {
+      width: 36px; height: 36px; margin: 0 auto 10px;
+      color: var(--text-muted); opacity: 0.6;
+    }
+
+    .upload-zone p { font-size: 13px; color: var(--text-muted); }
+    .upload-zone .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; opacity: 0.7; }
+
+    .upload-preview-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .upload-preview-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .upload-preview-item video {
+      width: 80px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #000;
+    }
+
+    .upload-preview-item .file-info { flex: 1; min-width: 0; }
+    .upload-preview-item .file-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .upload-preview-item .file-size { font-size: 11px; color: var(--text-muted); }
+
+    .upload-preview-item .remove-btn {
+      background: none; border: none; color: var(--red); cursor: pointer;
+      font-size: 16px; padding: 4px; line-height: 1; opacity: 0.7;
+    }
+    .upload-preview-item .remove-btn:hover { opacity: 1; }
+
+    /* ---------- Video Player in Detail ---------- */
+    .video-section { margin-top: 14px; }
+    .video-section .card-title { margin-bottom: 12px; }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .video-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .video-card video {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      display: block;
+    }
+
+    .video-card .video-info {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .video-card .video-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .video-card .video-size { font-size: 11px; color: var(--text-muted); }
+    .video-card .video-delete {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: 13px; padding: 2px 6px; border-radius: 4px;
+    }
+    .video-card .video-delete:hover { color: var(--red); background: rgba(232,91,91,0.1); }
+
+    /* Videos page */
+    .videos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .videos-grid .video-thumb-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .videos-grid .video-thumb-card:hover { border-color: var(--accent); }
+
+    .videos-grid .video-thumb-card video {
+      width: 100%; aspect-ratio: 16/9; background: #000; display: block; pointer-events: none;
+    }
+
+    .videos-grid .video-thumb-card .thumb-info {
+      padding: 12px;
+    }
+
+    .videos-grid .video-thumb-card .thumb-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .videos-grid .video-thumb-card .thumb-meta { font-size: 11px; color: var(--text-muted); }
+
+    /* ---------- Calendar ---------- */
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .calendar-header h2 { margin-bottom: 0; }
+    .cal-nav { display: flex; gap: 6px; }
+    .cal-nav button {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      width: 30px; height: 30px; border-radius: 7px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+    .cal-nav button:hover { background: var(--border); }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-day-label { text-align: center; font-size: 10px; color: var(--text-muted); padding: 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cal-day {
+      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border-radius: 7px; font-size: 12px; color: var(--text-muted); position: relative; cursor: default;
+    }
+    .cal-day.current-month { color: var(--text); }
+    .cal-day.today { background: var(--surface2); font-weight: 700; }
+    .cal-day.has-session { cursor: pointer; }
+    .cal-day.has-session::after {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent); position: absolute; bottom: 5px;
+    }
+    .cal-day.has-session.has-match::after { background: var(--red); }
+    .cal-day.has-session.has-multi::after { width: 14px; border-radius: 3px; height: 3px; }
+
+    .empty-state { text-align: center; padding: 36px 20px; color: var(--text-muted); }
+    .empty-state .icon { font-size: 32px; margin-bottom: 10px; opacity: 0.5; }
+    .empty-state p { font-size: 13px; }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center; z-index: 200;
+    }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; width: 400px; max-width: 90vw;
+      max-height: 80vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .modal .form-group { margin-bottom: 12px; }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .sidebar { width: 56px; padding: 16px 6px; align-items: center; }
+      .logo-sub, nav button span { display: none; }
+      .logo { font-size: 16px; justify-content: center; }
+      nav button { justify-content: center; padding: 9px; }
+      .main { margin-left: 56px; padding: 18px 14px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .dash-grid { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo"><span>10s</span></div>
+      <div class="logo-sub">Tennis Tracker</div>
+      <nav>
+        <button class="active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button data-page="log">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Log Session</span>
+        </button>
+        <button data-page="sessions">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Sessions</span>
+        </button>
+        <button data-page="videos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <span>Videos</span>
+        </button>
+        <button data-page="calendar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Calendar</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <!-- Dashboard -->
+      <div id="page-dashboard" class="page active">
+        <div class="dash-header" id="dash-header"></div>
+        <div class="stats-row" id="stats-row"></div>
+        <div class="dash-grid">
+          <div class="card" id="card-skills"></div>
+          <div class="card" id="card-streak"></div>
+          <div class="card" id="card-recent"></div>
+          <div class="card" id="card-goals"></div>
+        </div>
+      </div>
+
+      <!-- Log Session -->
+      <div id="page-log" class="page">
+        <h1 id="log-title">Log Session</h1>
+        <div class="card">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="f-date">
+            </div>
+            <div class="form-group">
+              <label>Session Type</label>
+              <select id="f-type">
+                <option value="practice">Practice</option>
+                <option value="match">Match</option>
+                <option value="lesson">Lesson</option>
+                <option value="drill">Drill</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Duration (minutes)</label>
+              <input type="number" id="f-duration" placeholder="60" min="1">
+            </div>
+            <div class="form-group">
+              <label>Intensity</label>
+              <select id="f-intensity">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>Focus Areas</label>
+              <input type="text" id="f-focus" placeholder="e.g. Serve, Backhand, Net play (comma separated)">
+            </div>
+            <div class="form-group full">
+              <label>How did it feel? (1-5)</label>
+              <div class="rating-input" id="f-rating">
+                <button type="button" class="star" data-val="1">&#9733;</button>
+                <button type="button" class="star" data-val="2">&#9733;</button>
+                <button type="button" class="star" data-val="3">&#9733;</button>
+                <button type="button" class="star" data-val="4">&#9733;</button>
+                <button type="button" class="star" data-val="5">&#9733;</button>
+              </div>
+            </div>
+            <div class="form-group full">
+              <label>Match Score (if applicable)</label>
+              <input type="text" id="f-score" placeholder="e.g. 6-4, 3-6, 7-5">
+            </div>
+            <div class="form-group full">
+              <label>Session Videos</label>
+              <div class="upload-zone" id="upload-zone">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2"/>
+                  <line x1="8" y1="9" x2="8" y2="15" stroke-width="2"/>
+                  <line x1="5" y1="12" x2="11" y2="12" stroke-width="2"/>
+                </svg>
+                <p>Drop video files here or click to browse</p>
+                <div class="hint">MP4, MOV, WebM supported</div>
+                <input type="file" id="f-videos" accept="video/*" multiple>
+              </div>
+              <div class="upload-preview-list" id="upload-previews"></div>
+            </div>
+            <div class="form-group full">
+              <label>Notes</label>
+              <textarea id="f-notes" placeholder="What went well? What to work on?"></textarea>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn" id="save-session">Save Session</button>
+            <button type="button" class="btn btn-secondary" id="cancel-edit" style="display:none">Cancel</button>
+            <span id="form-error" style="color:var(--red);font-size:12px;display:none"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sessions List -->
+      <div id="page-sessions" class="page">
+        <h1>All Sessions</h1>
+        <div class="card" id="all-sessions"></div>
+      </div>
+
+      <!-- Videos Gallery -->
+      <div id="page-videos" class="page">
+        <h1>Videos</h1>
+        <div id="videos-content"></div>
+      </div>
+
+      <!-- Session Detail -->
+      <div id="page-detail" class="page">
+        <button class="detail-back" id="detail-back">&larr; Back to sessions</button>
+        <div id="detail-content"></div>
+      </div>
+
+      <!-- Calendar -->
+      <div id="page-calendar" class="page">
+        <h1>Calendar</h1>
+        <div class="card">
+          <div class="calendar-header">
+            <h2 id="cal-month-label"></h2>
+            <div class="cal-nav">
+              <button id="cal-prev">&lsaquo;</button>
+              <button id="cal-next">&rsaquo;</button>
+            </div>
+          </div>
+          <div class="calendar-grid" id="cal-grid"></div>
+        </div>
+        <div class="card" id="cal-day-sessions" style="display:none; margin-top:14px;">
+          <h2 id="cal-day-label"></h2>
+          <div id="cal-day-list"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+
+  <script>
+    // ===================== DATA =====================
+    const STORE = {
+      sessions: '10s_sessions',
+      skills: '10s_skills',
+      goals: '10s_goals',
+    };
+
+    // In-memory fallback when localStorage is blocked
+    var memStore = {};
+    var useMemory = false;
+    try { localStorage.setItem('__test', '1'); localStorage.removeItem('__test'); }
+    catch(e) { useMemory = true; }
+
+    function load(key) {
+      try {
+        if (useMemory) return memStore[key] || null;
+        return JSON.parse(localStorage.getItem(key)) || null;
+      } catch(e) { return null; }
+    }
+    function save(key, val) {
+      if (useMemory) { memStore[key] = val; return; }
+      try { localStorage.setItem(key, JSON.stringify(val)); }
+      catch(e) { useMemory = true; memStore[key] = val; }
+    }
+
+    // Sessions
+    function getSessions() { return load(STORE.sessions) || []; }
+    function saveSessions(s) { save(STORE.sessions, s); }
+    function addSession(s) {
+      var all = getSessions();
+      s.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      all.unshift(s);
+      saveSessions(all);
+      return s;
+    }
+    function updateSession(id, data) {
+      var all = getSessions();
+      var i = all.findIndex(function(s) { return s.id === id; });
+      if (i !== -1) { all[i] = Object.assign({}, all[i], data); saveSessions(all); }
+    }
+    function deleteSession(id) {
+      saveSessions(getSessions().filter(function(s) { return s.id !== id; }));
+      // Also delete associated videos
+      videoDB.deleteForSession(id);
+    }
+    function getSession(id) { return getSessions().find(function(s) { return s.id === id; }); }
+
+    // Skills
+    var DEFAULT_SKILLS = [
+      { name: 'Serve', value: 5.0, color: 'var(--blue)' },
+      { name: 'Forehand', value: 5.0, color: 'var(--green)' },
+      { name: 'Backhand', value: 5.0, color: 'var(--purple)' },
+      { name: 'Footwork', value: 5.0, color: 'var(--orange)' },
+      { name: 'Net play', value: 5.0, color: 'var(--red)' },
+    ];
+    function getSkills() { return load(STORE.skills) || DEFAULT_SKILLS; }
+    function saveSkills(s) { save(STORE.skills, s); }
+
+    // Goals
+    function getGoals() { return load(STORE.goals) || []; }
+    function saveGoals(g) { save(STORE.goals, g); }
+
+    // ===================== VIDEO DB (IndexedDB) =====================
+    var videoDB = {
+      db: null,
+      DB_NAME: '10s_videos',
+      STORE_NAME: 'videos',
+
+      open: function() {
+        return new Promise(function(resolve, reject) {
+          if (videoDB.db) { resolve(videoDB.db); return; }
+          var req = indexedDB.open(videoDB.DB_NAME, 1);
+          req.onupgradeneeded = function(e) {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains(videoDB.STORE_NAME)) {
+              var store = db.createObjectStore(videoDB.STORE_NAME, { keyPath: 'id' });
+              store.createIndex('sessionId', 'sessionId', { unique: false });
+            }
+          };
+          req.onsuccess = function(e) { videoDB.db = e.target.result; resolve(videoDB.db); };
+          req.onerror = function(e) { reject(e); };
+        });
+      },
+
+      add: function(sessionId, file) {
+        return videoDB.open().then(function(db) {
+          return new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function() {
+              var tx = db.transaction(videoDB.STORE_NAME, 'readwrite');
+              var store = tx.objectStore(videoDB.STORE_NAME);
+              var record = {
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                sessionId: sessionId,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                blob: reader.result,
+                createdAt: new Date().toISOString()
+              };
+              var req = store.add(record);
+              req.onsuccess = function() { resolve(record.id); };
+              req.onerror = function(e) { reject(e); };
+            };
+            reader.readAsArrayBuffer(file);
+          });
+        });
+      },
+
+      getForSession: function(sessionId) {
+        return videoDB.open().then(function(db) {
+          return new Promise(function(resolve, reject) {
+            var tx = db.transaction(videoDB.STORE_NAME, 'readonly');
+            var store = tx.objectStore(videoDB.STORE_NAME);
+            var index = store.index('sessionId');
+            var req = index.getAll(sessionId);
+            req.onsuccess = function() { resolve(req.result); };
+            req.onerror = function(e) { reject(e); };
+          });
+        });
+      },
+
+      getAll: function() {
+        return videoDB.open().then(function(db) {
+          return new Promise(function(resolve, reject) {
+            var tx = db.transaction(videoDB.STORE_NAME, 'readonly');
+            var store = tx.objectStore(videoDB.STORE_NAME);
+            var req = store.getAll();
+            req.onsuccess = function() { resolve(req.result); };
+            req.onerror = function(e) { reject(e); };
+          });
+        });
+      },
+
+      deleteOne: function(id) {
+        return videoDB.open().then(function(db) {
+          return new Promise(function(resolve, reject) {
+            var tx = db.transaction(videoDB.STORE_NAME, 'readwrite');
+            tx.objectStore(videoDB.STORE_NAME).delete(id);
+            tx.oncomplete = function() { resolve(); };
+            tx.onerror = function(e) { reject(e); };
+          });
+        });
+      },
+
+      deleteForSession: function(sessionId) {
+        return videoDB.getForSession(sessionId).then(function(videos) {
+          return Promise.all(videos.map(function(v) { return videoDB.deleteOne(v.id); }));
+        });
+      }
+    };
+
+    function blobURL(arrayBuffer, type) {
+      return URL.createObjectURL(new Blob([arrayBuffer], { type: type }));
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // ===================== NAV =====================
+    var currentPage = 'dashboard';
+    var editingId = null;
+
+    var navBtns = document.querySelectorAll('nav button');
+    navBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() { navigate(btn.dataset.page); });
+    });
+
+    window.navigate = function(page) {
+      currentPage = page;
+      document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+      document.getElementById('page-' + page).classList.add('active');
+      navBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.page === page); });
+      if (page === 'dashboard') renderDashboard();
+      else if (page === 'sessions') renderAllSessions();
+      else if (page === 'calendar') renderCalendar();
+      else if (page === 'log') setupLogForm();
+      else if (page === 'videos') renderVideosPage();
+    };
+
+    // ===================== HELPERS =====================
+    function fmt(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function shortDate(dateStr) {
+      var d = new Date(dateStr + 'T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function escapeHTML(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function sessionLabel(s) {
+      var type = s.type.charAt(0).toUpperCase() + s.type.slice(1);
+      var focus = s.focus ? s.focus.split(',')[0].trim() : '';
+      return focus ? focus + ' ' + type.toLowerCase() : type;
+    }
+
+    // ===================== DASHBOARD =====================
+    function renderDashboard() {
+      var sessions = getSessions();
+      var now = new Date();
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+      document.getElementById('dash-header').textContent =
+        'This Month \u2014 ' + months[now.getMonth()] + ' ' + now.getFullYear();
+
+      var thisMonth = sessions.filter(function(s) {
+        var d = new Date(s.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+
+      var totalMin = thisMonth.reduce(function(a, s) { return a + (parseInt(s.duration) || 0); }, 0);
+      var totalHrs = (totalMin / 60).toFixed(1);
+      var avgMin = thisMonth.length ? Math.round(totalMin / thisMonth.length) : 0;
+
+      var prevMonth = sessions.filter(function(s) {
+        var d = new Date(s.date);
+        var pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        var py = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        return d.getMonth() === pm && d.getFullYear() === py;
+      });
+      var prevAvg = prevMonth.length
+        ? Math.round(prevMonth.reduce(function(a, s) { return a + (parseInt(s.duration) || 0); }, 0) / prevMonth.length)
+        : 0;
+
+      var focusSet = new Set();
+      thisMonth.forEach(function(s) {
+        if (s.focus) s.focus.split(',').forEach(function(f) { focusSet.add(f.trim().toLowerCase()); });
+      });
+
+      var goals = getGoals();
+      var sessionGoal = goals.find(function(g) { return g.type === 'counter'; });
+      var sessionGoalText = sessionGoal ? 'of ' + sessionGoal.target + ' goal' : 'this month';
+
+      document.getElementById('stats-row').innerHTML =
+        '<div class="stat-card"><div class="label">Sessions</div><div class="value">' + thisMonth.length + '</div><div class="sub">' + sessionGoalText + '</div></div>' +
+        '<div class="stat-card"><div class="label">Hours played</div><div class="value">' + totalHrs + '</div><div class="sub">this month</div></div>' +
+        '<div class="stat-card"><div class="label">Avg session</div><div class="value">' + avgMin + ' min</div><div class="sub">' + (prevAvg ? (avgMin >= prevAvg ? 'up from ' + prevAvg : 'down from ' + prevAvg) : '') + '</div></div>' +
+        '<div class="stat-card"><div class="label">Focus areas</div><div class="value">' + focusSet.size + '</div><div class="sub">active drills</div></div>';
+
+      renderSkillsCard();
+      renderStreakCard(sessions);
+      renderRecentCard(sessions);
+      renderGoalsCard();
+    }
+
+    function renderSkillsCard() {
+      var skills = getSkills();
+      var html = '<div class="card-title">Skill ratings</div>';
+      skills.forEach(function(sk) {
+        var pct = (sk.value / 10) * 100;
+        html += '<div class="skill-row"><div class="skill-label">' + sk.name + '</div>' +
+          '<div class="skill-bar-track"><div class="skill-bar-fill" style="width:' + pct + '%;background:' + sk.color + '"></div></div>' +
+          '<div class="skill-val">' + sk.value.toFixed(1) + '</div></div>';
+      });
+      html += '<button class="card-action" onclick="openSkillsModal()">Update ratings &#8599;</button>';
+      document.getElementById('card-skills').innerHTML = html;
+    }
+
+    function renderStreakCard(sessions) {
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+      var todayStr = fmt(today);
+      var dateSet = new Set(sessions.map(function(s) { return s.date; }));
+
+      var dots = '';
+      for (var i = 27; i >= 0; i--) {
+        var d = new Date(today);
+        d.setDate(d.getDate() - i);
+        var ds = fmt(d);
+        var cls = 'streak-dot';
+        if (dateSet.has(ds)) cls += ' filled';
+        if (ds === todayStr) cls += ' today';
+        dots += '<div class="' + cls + '"></div>';
+      }
+
+      var streak = 0;
+      var check = new Date(today);
+      if (!dateSet.has(todayStr)) check.setDate(check.getDate() - 1);
+      for (var j = 0; j < 365; j++) {
+        if (dateSet.has(fmt(check))) { streak++; check.setDate(check.getDate() - 1); }
+        else break;
+      }
+
+      var sorted = Array.from(dateSet).sort();
+      var best = 0, cur = 0;
+      for (var k = 0; k < sorted.length; k++) {
+        if (k === 0) { cur = 1; }
+        else {
+          var prev = new Date(sorted[k - 1] + 'T12:00:00');
+          var curr = new Date(sorted[k] + 'T12:00:00');
+          cur = ((curr - prev) / 86400000 === 1) ? cur + 1 : 1;
+        }
+        if (cur > best) best = cur;
+      }
+
+      document.getElementById('card-streak').innerHTML =
+        '<div class="card-title">Practice streak</div>' +
+        '<div class="streak-label">Past 28 days</div>' +
+        '<div class="streak-grid">' + dots + '</div>' +
+        '<div class="streak-stats">Current streak: <strong>' + streak + ' days</strong> &nbsp;&middot;&nbsp; Best: <strong>' + best + ' days</strong></div>';
+    }
+
+    function renderRecentCard(sessions) {
+      var recent = sessions.slice(0, 4);
+      var html = '<div class="card-title">Recent sessions</div>';
+      if (recent.length === 0) {
+        html += '<div class="empty-state"><p>No sessions yet</p></div>';
+      } else {
+        recent.forEach(function(s) {
+          var vidBadge = (s.videoCount && s.videoCount > 0) ? '<span class="vid-badge">' + s.videoCount + ' vid' + (s.videoCount > 1 ? 's' : '') + '</span>' : '';
+          html += '<div class="session-row" data-id="' + s.id + '">' +
+            '<div class="name">' + sessionLabel(s) + vidBadge + '</div>' +
+            '<div class="date">' + shortDate(s.date) + '</div>' +
+            '<div class="dur">' + s.duration + ' min</div></div>';
+        });
+      }
+      html += '<button class="card-action" onclick="navigate(\'log\')">Log session &#8599;</button>';
+      document.getElementById('card-recent').innerHTML = html;
+
+      document.getElementById('card-recent').querySelectorAll('.session-row').forEach(function(el) {
+        el.addEventListener('click', function() { showDetail(el.dataset.id); });
+      });
+    }
+
+    function renderGoalsCard() {
+      var goals = getGoals();
+      var sessions = getSessions();
+      var now = new Date();
+      var thisMonthCount = sessions.filter(function(s) {
+        var d = new Date(s.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+
+      var html = '<div class="card-title">Goals</div>';
+      if (goals.length === 0) {
+        html += '<div class="empty-state" style="padding:16px"><p>Set your first goal to stay motivated</p></div>';
+      } else {
+        goals.forEach(function(g, i) {
+          var badge = '';
+          if (g.type === 'counter') {
+            var current = g.metric === 'sessions_month' ? thisMonthCount : 0;
+            badge = '<span class="goal-badge counter">' + current + ' / ' + g.target + '</span>';
+          } else {
+            var cls = g.status === 'done' ? 'done' : g.status === 'in progress' ? 'in-progress' : 'not-started';
+            badge = '<span class="goal-badge ' + cls + '" onclick="cycleGoalStatus(' + i + ')" style="cursor:pointer">' + g.status + '</span>';
+          }
+          html += '<div class="goal-row"><div class="goal-text">' + escapeHTML(g.text) + '</div>' + badge + '</div>';
+        });
+      }
+      html += '<button class="card-action" onclick="openGoalModal()">Add goal &#8599;</button>';
+      document.getElementById('card-goals').innerHTML = html;
+    }
+
+    // ===================== SKILLS MODAL =====================
+    window.openSkillsModal = function() {
+      var skills = getSkills();
+      var rows = skills.map(function(sk, i) {
+        return '<div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+          '<label style="width:80px;margin:0;text-transform:none;font-size:13px">' + sk.name + '</label>' +
+          '<input type="number" step="0.1" min="0" max="10" value="' + sk.value + '" data-skill="' + i + '" style="width:70px;text-align:center"></div>';
+      }).join('');
+
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal"><h3>Update Skill Ratings</h3>' + rows +
+        '<div class="btn-row"><button class="btn" id="modal-save-skills">Save</button>' +
+        '<button class="btn btn-secondary" id="modal-cancel-skills">Cancel</button></div></div>';
+      document.getElementById('modal-root').appendChild(overlay);
+
+      overlay.querySelector('#modal-cancel-skills').onclick = function() { overlay.remove(); };
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+      overlay.querySelector('#modal-save-skills').onclick = function() {
+        overlay.querySelectorAll('input[data-skill]').forEach(function(inp) {
+          var idx = parseInt(inp.dataset.skill);
+          skills[idx].value = Math.min(10, Math.max(0, parseFloat(inp.value) || 0));
+        });
+        saveSkills(skills);
+        overlay.remove();
+        renderDashboard();
+      };
+    };
+
+    // ===================== GOALS MODAL =====================
+    window.openGoalModal = function() {
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal"><h3>Add Goal</h3>' +
+        '<div class="form-group"><label>Goal</label><input type="text" id="modal-goal-text" placeholder="e.g. Consistent second serve"></div>' +
+        '<div class="form-group"><label>Type</label><select id="modal-goal-type">' +
+        '<option value="status">Status (not started / in progress / done)</option>' +
+        '<option value="counter">Monthly session counter</option></select></div>' +
+        '<div class="form-group" id="modal-goal-target-group" style="display:none">' +
+        '<label>Target count</label><input type="number" id="modal-goal-target" placeholder="10" min="1"></div>' +
+        '<div class="btn-row"><button class="btn" id="modal-save-goal">Add</button>' +
+        '<button class="btn btn-secondary" id="modal-cancel-goal">Cancel</button></div></div>';
+      document.getElementById('modal-root').appendChild(overlay);
+
+      var typeSelect = overlay.querySelector('#modal-goal-type');
+      var targetGroup = overlay.querySelector('#modal-goal-target-group');
+      typeSelect.onchange = function() {
+        targetGroup.style.display = typeSelect.value === 'counter' ? 'block' : 'none';
+      };
+
+      overlay.querySelector('#modal-cancel-goal').onclick = function() { overlay.remove(); };
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+      overlay.querySelector('#modal-save-goal').onclick = function() {
+        var text = overlay.querySelector('#modal-goal-text').value.trim();
+        if (!text) return;
+        var goals = getGoals();
+        if (typeSelect.value === 'counter') {
+          goals.push({ text: text, type: 'counter', metric: 'sessions_month', target: parseInt(overlay.querySelector('#modal-goal-target').value) || 10 });
+        } else {
+          goals.push({ text: text, type: 'status', status: 'not started' });
+        }
+        saveGoals(goals);
+        overlay.remove();
+        renderDashboard();
+      };
+    };
+
+    window.cycleGoalStatus = function(i) {
+      var goals = getGoals();
+      var order = ['not started', 'in progress', 'done'];
+      var cur = order.indexOf(goals[i].status);
+      goals[i].status = order[(cur + 1) % 3];
+      saveGoals(goals);
+      renderGoalsCard();
+    };
+
+    // ===================== ALL SESSIONS =====================
+    function renderAllSessions() {
+      var sessions = getSessions();
+      var el = document.getElementById('all-sessions');
+      if (!sessions.length) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">&#127934;</div><p>No sessions logged yet.</p></div>';
+        return;
+      }
+      el.innerHTML = sessions.map(function(s) {
+        var vidBadge = (s.videoCount && s.videoCount > 0) ? '<span class="vid-badge">' + s.videoCount + ' vid' + (s.videoCount > 1 ? 's' : '') + '</span>' : '';
+        return '<div class="session-row" data-id="' + s.id + '">' +
+          '<div class="name">' + sessionLabel(s) + vidBadge + '</div>' +
+          '<div class="date">' + shortDate(s.date) + '</div>' +
+          '<div class="dur">' + s.duration + ' min</div></div>';
+      }).join('');
+
+      el.querySelectorAll('.session-row').forEach(function(row) {
+        row.addEventListener('click', function() { showDetail(row.dataset.id); });
+      });
+    }
+
+    // ===================== SESSION DETAIL =====================
+    function showDetail(id) {
+      var s = getSession(id);
+      if (!s) return;
+
+      var d = new Date(s.date + 'T12:00:00');
+      var dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      var typeLabel = s.type.charAt(0).toUpperCase() + s.type.slice(1);
+
+      var stars = '';
+      for (var i = 0; i < 5; i++) {
+        stars += '<span class="star ' + (i < (s.rating || 0) ? 'filled' : '') + '">&#9733;</span>';
+      }
+
+      var focusTags = s.focus
+        ? s.focus.split(',').map(function(f) { return '<span class="skill-tag">' + f.trim() + '</span>'; }).join('')
+        : '<span style="color:var(--text-muted)">None specified</span>';
+
+      var html = '<div class="detail-header"><div><h1>' + typeLabel + ' Session</h1>' +
+        '<div class="detail-meta">' + dateStr + '</div></div>' +
+        '<span class="tag tag-' + s.type + '">' + typeLabel + '</span></div>' +
+        '<div class="detail-grid">' +
+        '<div class="detail-field"><div class="label">Duration</div><div class="value">' + s.duration + ' minutes</div></div>' +
+        '<div class="detail-field"><div class="label">Intensity</div><div class="value">' + ((s.intensity || 'medium').charAt(0).toUpperCase() + (s.intensity || 'medium').slice(1)) + '</div></div>' +
+        '<div class="detail-field"><div class="label">Feeling</div><div class="rating">' + stars + '</div></div></div>';
+
+      if (s.score) {
+        html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Match Score</div><div class="value" style="font-size:18px">' + escapeHTML(s.score) + '</div></div></div>';
+      }
+
+      html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Focus Areas</div><div class="skill-tags">' + focusTags + '</div></div></div>';
+
+      if (s.notes) {
+        html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(s.notes) + '</div></div></div>';
+      }
+
+      html += '<div class="video-section card" id="detail-videos"><div class="card-title">Videos</div><div id="detail-video-grid" class="video-grid"><div class="empty-state" style="padding:16px"><p>Loading videos...</p></div></div></div>';
+
+      html += '<div class="btn-row" style="margin-top:14px">' +
+        '<button class="btn btn-secondary" onclick="editSession(\'' + s.id + '\')">Edit</button>' +
+        '<button class="btn btn-danger" onclick="confirmDelete(\'' + s.id + '\')">Delete</button></div>';
+
+      document.getElementById('detail-content').innerHTML = html;
+      navigate('detail');
+
+      // Load videos for this session
+      videoDB.getForSession(id).then(function(videos) {
+        var grid = document.getElementById('detail-video-grid');
+        if (!videos.length) {
+          grid.innerHTML = '<div class="empty-state" style="padding:16px"><p>No videos for this session</p></div>';
+          return;
+        }
+        grid.innerHTML = videos.map(function(v) {
+          var url = blobURL(v.blob, v.type);
+          return '<div class="video-card" data-vid="' + v.id + '">' +
+            '<video src="' + url + '" controls preload="metadata"></video>' +
+            '<div class="video-info"><div><div class="video-name">' + escapeHTML(v.name) + '</div>' +
+            '<div class="video-size">' + formatSize(v.size) + '</div></div>' +
+            '<button class="video-delete" onclick="deleteVideo(\'' + v.id + '\', \'' + id + '\')" title="Delete video">&times;</button></div></div>';
+        }).join('');
+      });
+    }
+
+    window.deleteVideo = function(videoId, sessionId) {
+      videoDB.deleteOne(videoId).then(function() {
+        // Update video count on session
+        var s = getSession(sessionId);
+        if (s) {
+          updateSession(sessionId, { videoCount: Math.max(0, (s.videoCount || 1) - 1) });
+        }
+        showDetail(sessionId);
+      });
+    };
+
+    document.getElementById('detail-back').addEventListener('click', function() { navigate('sessions'); });
+
+    window.editSession = function(id) { editingId = id; navigate('log'); };
+    window.confirmDelete = function(id) {
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal"><h3>Delete session?</h3>' +
+        '<p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">This will also delete all associated videos. This cannot be undone.</p>' +
+        '<div class="btn-row"><button class="btn btn-danger" id="modal-confirm-del">Delete</button>' +
+        '<button class="btn btn-secondary" id="modal-cancel-del">Cancel</button></div></div>';
+      document.getElementById('modal-root').appendChild(overlay);
+      overlay.querySelector('#modal-cancel-del').onclick = function() { overlay.remove(); };
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      overlay.querySelector('#modal-confirm-del').onclick = function() {
+        deleteSession(id);
+        overlay.remove();
+        navigate('sessions');
+      };
+    };
+
+    // ===================== VIDEOS PAGE =====================
+    function renderVideosPage() {
+      var content = document.getElementById('videos-content');
+      content.innerHTML = '<div class="empty-state"><p>Loading videos...</p></div>';
+
+      videoDB.getAll().then(function(videos) {
+        if (!videos.length) {
+          content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><p>No videos yet. Upload videos when logging a session.</p></div></div>';
+          return;
+        }
+
+        // Group by session
+        var sessions = getSessions();
+        var sessionMap = {};
+        sessions.forEach(function(s) { sessionMap[s.id] = s; });
+
+        // Sort newest first
+        videos.sort(function(a, b) { return b.createdAt > a.createdAt ? 1 : -1; });
+
+        var html = '<div class="videos-grid">';
+        videos.forEach(function(v) {
+          var url = blobURL(v.blob, v.type);
+          var s = sessionMap[v.sessionId];
+          var sessionInfo = s ? sessionLabel(s) + ' \u2014 ' + shortDate(s.date) : 'Unknown session';
+          html += '<div class="video-thumb-card" data-sid="' + v.sessionId + '">' +
+            '<video src="' + url + '" preload="metadata" muted></video>' +
+            '<div class="thumb-info"><div class="thumb-name">' + escapeHTML(v.name) + '</div>' +
+            '<div class="thumb-meta">' + sessionInfo + ' &middot; ' + formatSize(v.size) + '</div></div></div>';
+        });
+        html += '</div>';
+        content.innerHTML = html;
+
+        content.querySelectorAll('.video-thumb-card').forEach(function(card) {
+          card.addEventListener('click', function() {
+            showDetail(card.dataset.sid);
+          });
+        });
+      });
+    }
+
+    // ===================== LOG FORM + VIDEO UPLOAD =====================
+    var selectedRating = 0;
+    var pendingFiles = []; // files to upload on save
+
+    document.querySelectorAll('#f-rating .star').forEach(function(star) {
+      star.addEventListener('click', function() {
+        selectedRating = parseInt(star.dataset.val);
+        updateStars();
+      });
+    });
+
+    function updateStars() {
+      document.querySelectorAll('#f-rating .star').forEach(function(s) {
+        s.classList.toggle('filled', parseInt(s.dataset.val) <= selectedRating);
+      });
+    }
+
+    // Upload zone
+    var uploadZone = document.getElementById('upload-zone');
+    var fileInput = document.getElementById('f-videos');
+    var previewList = document.getElementById('upload-previews');
+
+    uploadZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function() {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      var files = Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('video/'); });
+      addPendingFiles(files);
+    });
+
+    fileInput.addEventListener('change', function() {
+      addPendingFiles(Array.from(fileInput.files));
+      fileInput.value = '';
+    });
+
+    function addPendingFiles(files) {
+      files.forEach(function(f) { pendingFiles.push(f); });
+      renderPendingPreviews();
+    }
+
+    function renderPendingPreviews() {
+      previewList.innerHTML = pendingFiles.map(function(f, i) {
+        var url = URL.createObjectURL(f);
+        return '<div class="upload-preview-item">' +
+          '<video src="' + url + '" preload="metadata" muted></video>' +
+          '<div class="file-info"><div class="file-name">' + escapeHTML(f.name) + '</div>' +
+          '<div class="file-size">' + formatSize(f.size) + '</div></div>' +
+          '<button type="button" class="remove-btn" data-idx="' + i + '">&times;</button></div>';
+      }).join('');
+
+      previewList.querySelectorAll('.remove-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          pendingFiles.splice(parseInt(btn.dataset.idx), 1);
+          renderPendingPreviews();
+        });
+      });
+    }
+
+    function setupLogForm() {
+      pendingFiles = [];
+      renderPendingPreviews();
+
+      if (editingId) {
+        var s = getSession(editingId);
+        if (s) {
+          document.getElementById('log-title').textContent = 'Edit Session';
+          document.getElementById('f-date').value = s.date;
+          document.getElementById('f-type').value = s.type;
+          document.getElementById('f-duration').value = s.duration;
+          document.getElementById('f-intensity').value = s.intensity || 'medium';
+          document.getElementById('f-focus').value = s.focus || '';
+          document.getElementById('f-score').value = s.score || '';
+          document.getElementById('f-notes').value = s.notes || '';
+          selectedRating = s.rating || 0;
+          updateStars();
+          document.getElementById('cancel-edit').style.display = 'inline-block';
+          return;
+        }
+      }
+      editingId = null;
+      document.getElementById('log-title').textContent = 'Log Session';
+      document.getElementById('f-date').value = fmt(new Date());
+      document.getElementById('f-type').value = 'practice';
+      document.getElementById('f-duration').value = '';
+      document.getElementById('f-intensity').value = 'medium';
+      document.getElementById('f-focus').value = '';
+      document.getElementById('f-score').value = '';
+      document.getElementById('f-notes').value = '';
+      selectedRating = 0;
+      updateStars();
+      document.getElementById('cancel-edit').style.display = 'none';
+    }
+
+    document.getElementById('cancel-edit').addEventListener('click', function() { editingId = null; navigate('sessions'); });
+
+    document.getElementById('save-session').addEventListener('click', function() {
+      var date = document.getElementById('f-date').value;
+      var duration = document.getElementById('f-duration').value;
+      var errEl = document.getElementById('form-error');
+
+      if (!date || !duration) {
+        errEl.textContent = 'Please fill in date and duration.';
+        errEl.style.display = 'inline';
+        return;
+      }
+      errEl.style.display = 'none';
+
+      var data = {
+        date: date,
+        type: document.getElementById('f-type').value,
+        duration: parseInt(duration),
+        intensity: document.getElementById('f-intensity').value,
+        focus: document.getElementById('f-focus').value,
+        rating: selectedRating,
+        score: document.getElementById('f-score').value,
+        notes: document.getElementById('f-notes').value,
+        videoCount: 0
+      };
+
+      var saveBtn = document.getElementById('save-session');
+
+      if (editingId) {
+        // Editing existing session
+        var existingSession = getSession(editingId);
+        data.videoCount = (existingSession ? existingSession.videoCount : 0) || 0;
+
+        if (pendingFiles.length > 0) {
+          saveBtn.textContent = 'Saving...';
+          saveBtn.disabled = true;
+          data.videoCount += pendingFiles.length;
+          updateSession(editingId, data);
+          Promise.all(pendingFiles.map(function(f) { return videoDB.add(editingId, f); })).then(function() {
+            saveBtn.textContent = 'Save Session';
+            saveBtn.disabled = false;
+            editingId = null;
+            navigate('sessions');
+          });
+        } else {
+          updateSession(editingId, data);
+          editingId = null;
+          navigate('sessions');
+        }
+      } else {
+        // New session
+        data.videoCount = pendingFiles.length;
+        var session = addSession(data);
+
+        if (pendingFiles.length > 0) {
+          saveBtn.textContent = 'Saving videos...';
+          saveBtn.disabled = true;
+          Promise.all(pendingFiles.map(function(f) { return videoDB.add(session.id, f); })).then(function() {
+            saveBtn.textContent = 'Save Session';
+            saveBtn.disabled = false;
+            navigate('dashboard');
+          });
+        } else {
+          navigate('dashboard');
+        }
+      }
+    });
+
+    // ===================== CALENDAR =====================
+    var calYear, calMonth;
+    (function() { var now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth(); })();
+
+    document.getElementById('cal-prev').addEventListener('click', function() {
+      calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar();
+    });
+    document.getElementById('cal-next').addEventListener('click', function() {
+      calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar();
+    });
+
+    function renderCalendar() {
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('cal-month-label').textContent = months[calMonth] + ' ' + calYear;
+
+      var sessions = getSessions();
+      var byDate = {};
+      sessions.forEach(function(s) { if (!byDate[s.date]) byDate[s.date] = []; byDate[s.date].push(s); });
+
+      var firstDay = new Date(calYear, calMonth, 1).getDay();
+      var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      var todayStr = fmt(new Date());
+
+      var html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(function(d) { return '<div class="cal-day-label">' + d + '</div>'; }).join('');
+
+      var prevDays = new Date(calYear, calMonth, 0).getDate();
+      for (var i = firstDay - 1; i >= 0; i--) html += '<div class="cal-day">' + (prevDays - i) + '</div>';
+
+      for (var d = 1; d <= daysInMonth; d++) {
+        var ds = calYear + '-' + String(calMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        var daySessions = byDate[ds] || [];
+        var cls = 'cal-day current-month';
+        if (ds === todayStr) cls += ' today';
+        if (daySessions.length > 0) cls += ' has-session';
+        if (daySessions.some(function(s) { return s.type === 'match'; })) cls += ' has-match';
+        if (daySessions.length > 1) cls += ' has-multi';
+        html += '<div class="' + cls + '" data-date="' + ds + '">' + d + '</div>';
+      }
+
+      var total = firstDay + daysInMonth;
+      for (var r = 1; r <= (7 - total % 7) % 7; r++) html += '<div class="cal-day">' + r + '</div>';
+
+      var grid = document.getElementById('cal-grid');
+      grid.innerHTML = html;
+
+      grid.querySelectorAll('.cal-day.has-session').forEach(function(el) {
+        el.addEventListener('click', function() {
+          var date = el.dataset.date;
+          var ds = byDate[date];
+          var dObj = new Date(date + 'T12:00:00');
+          document.getElementById('cal-day-label').textContent = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+          document.getElementById('cal-day-list').innerHTML = ds.map(function(s) {
+            return '<div class="session-row" data-id="' + s.id + '">' +
+              '<div class="name">' + sessionLabel(s) + '</div>' +
+              '<div class="date">' + shortDate(s.date) + '</div>' +
+              '<div class="dur">' + s.duration + ' min</div></div>';
+          }).join('');
+          document.getElementById('cal-day-sessions').style.display = 'block';
+          document.getElementById('cal-day-list').querySelectorAll('.session-row').forEach(function(row) {
+            row.addEventListener('click', function() { showDetail(row.dataset.id); });
+          });
+        });
+      });
+
+      document.getElementById('cal-day-sessions').style.display = 'none';
+    }
+
+    // ===================== INIT =====================
+    videoDB.open().then(function() {
+      renderDashboard();
+    });
+  </script>
+</body>
+</html>
