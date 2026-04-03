@@ -121,14 +121,6 @@
 
     .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
-    /* Skill Ratings */
-    .skill-row { display: flex; align-items: center; margin-bottom: 10px; }
-    .skill-row:last-of-type { margin-bottom: 0; }
-    .skill-label { width: 80px; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
-    .skill-bar-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; margin-right: 12px; overflow: hidden; }
-    .skill-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-    .skill-val { font-size: 13px; font-weight: 600; width: 28px; text-align: right; }
-
     .card-action {
       display: inline-flex; align-items: center; gap: 4px; margin-top: 16px;
       font-size: 12px; color: var(--text); background: var(--surface2);
@@ -186,10 +178,11 @@
     .detail-field .value { font-size: 15px; font-weight: 500; }
 
     .tag { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .tag-practice { background: rgba(91, 138, 240, 0.15); color: var(--blue); }
+    .tag-rally { background: rgba(91, 138, 240, 0.15); color: var(--blue); }
     .tag-match { background: rgba(232, 91, 91, 0.15); color: var(--red); }
-    .tag-lesson { background: rgba(232, 155, 78, 0.15); color: var(--orange); }
     .tag-drill { background: rgba(61, 184, 140, 0.15); color: var(--green); }
+    .tag-tiebreak { background: rgba(232, 155, 78, 0.15); color: var(--orange); }
+    .tag-vod-review { background: rgba(155, 110, 240, 0.15); color: var(--purple); }
 
     .rating { display: flex; gap: 3px; }
     .rating .star { color: var(--border); font-size: 16px; }
@@ -413,6 +406,104 @@
     .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
     .modal .form-group { margin-bottom: 12px; }
 
+    /* YouTube / Clips */
+    .yt-import-row {
+      display: flex; gap: 8px; margin-bottom: 8px;
+    }
+    .yt-import-row input { flex: 1; }
+    .yt-import-row button {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 9px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .yt-import-row button:hover { background: var(--border); }
+
+    .yt-preview-list { display: flex; flex-direction: column; gap: 6px; }
+    .yt-preview-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+    }
+    .yt-preview-item img {
+      width: 80px; height: 45px; object-fit: cover; border-radius: 4px; background: #000;
+    }
+    .yt-preview-item .file-info { flex: 1; min-width: 0; }
+    .yt-preview-item .file-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .yt-preview-item .file-size { font-size: 11px; color: var(--text-muted); }
+    .yt-preview-item .remove-btn {
+      background: none; border: none; color: var(--red); cursor: pointer;
+      font-size: 16px; padding: 4px; line-height: 1; opacity: 0.7;
+    }
+    .yt-preview-item .remove-btn:hover { opacity: 1; }
+
+    .clips-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .clips-header h1 { margin-bottom: 0; }
+
+    .clips-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;
+    }
+    .clip-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; cursor: pointer; transition: border-color 0.15s;
+    }
+    .clip-card:hover { border-color: var(--accent); }
+    .clip-card img {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #000;
+    }
+    .clip-card .clip-info { padding: 12px; }
+    .clip-card .clip-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .clip-card .clip-meta { font-size: 11px; color: var(--text-muted); }
+
+    .clip-detail-player { position: relative; width: 100%; margin-bottom: 16px; }
+    .clip-detail-player iframe {
+      width: 100%; aspect-ratio: 16/9; border: none; border-radius: var(--radius); background: #000;
+    }
+
+    .comment-thread { margin-top: 16px; }
+    .comment-item {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .comment-item:last-of-type { border-bottom: none; }
+    .comment-text { font-size: 13px; line-height: 1.5; flex: 1; }
+    .comment-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; margin-left: 12px; }
+    .comment-del {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: 14px; padding: 0 4px; margin-left: 6px; opacity: 0.5;
+    }
+    .comment-del:hover { opacity: 1; color: var(--red); }
+
+    .comment-input { display: flex; gap: 8px; margin-top: 12px; }
+    .comment-input textarea {
+      flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      padding: 9px 12px; color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; resize: none; min-height: 40px;
+    }
+    .comment-input textarea:focus { border-color: var(--accent); }
+    .comment-input button {
+      align-self: flex-end;
+    }
+
+    .yt-section { margin-top: 14px; }
+    #detail-yt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    .yt-card {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; margin-bottom: 10px;
+    }
+    .yt-card iframe, .yt-card img {
+      width: 100%; aspect-ratio: 16/9; border: none; display: block; object-fit: cover;
+    }
+    .yt-card { cursor: pointer; }
+    .yt-card .yt-card-info {
+      padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .yt-card .yt-card-title { font-size: 12px; font-weight: 500; }
+    .yt-card .yt-card-actions { display: flex; gap: 6px; }
+    .yt-card .yt-card-actions button {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 5px; padding: 4px 8px; font-size: 11px; cursor: pointer; font-family: inherit;
+    }
+    .yt-card .yt-card-actions button:hover { background: var(--border); }
+
     /* Responsive */
     @media (max-width: 860px) {
       .sidebar { width: 56px; padding: 16px 6px; align-items: center; }
@@ -448,6 +539,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           <span>Videos</span>
         </button>
+        <button data-page="clips">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M10 8l6 4-6 4V8z"/></svg>
+          <span>Clips</span>
+        </button>
         <button data-page="calendar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <span>Calendar</span>
@@ -461,10 +556,9 @@
         <div class="dash-header" id="dash-header"></div>
         <div class="stats-row" id="stats-row"></div>
         <div class="dash-grid">
-          <div class="card" id="card-skills"></div>
           <div class="card" id="card-streak"></div>
-          <div class="card" id="card-recent"></div>
           <div class="card" id="card-goals"></div>
+          <div class="card" id="card-recent" style="grid-column: 1 / -1"></div>
         </div>
       </div>
 
@@ -480,10 +574,11 @@
             <div class="form-group">
               <label>Session Type</label>
               <select id="f-type">
-                <option value="practice">Practice</option>
+                <option value="rally">Rally</option>
                 <option value="match">Match</option>
-                <option value="lesson">Lesson</option>
                 <option value="drill">Drill</option>
+                <option value="tiebreak">Tiebreak</option>
+                <option value="vod-review">VOD Review</option>
               </select>
             </div>
             <div class="form-group">
@@ -532,6 +627,14 @@
               <div class="upload-preview-list" id="upload-previews"></div>
             </div>
             <div class="form-group full">
+              <label>YouTube Videos</label>
+              <div class="yt-import-row">
+                <input type="text" id="f-youtube-url" placeholder="Paste YouTube URL...">
+                <button type="button" id="add-yt-btn">Add</button>
+              </div>
+              <div class="yt-preview-list" id="yt-previews"></div>
+            </div>
+            <div class="form-group full">
               <label>Notes</label>
               <textarea id="f-notes" placeholder="What went well? What to work on?"></textarea>
             </div>
@@ -560,6 +663,21 @@
       <div id="page-detail" class="page">
         <button class="detail-back" id="detail-back">&larr; Back to sessions</button>
         <div id="detail-content"></div>
+      </div>
+
+      <!-- Clips Browse -->
+      <div id="page-clips" class="page">
+        <div class="clips-header">
+          <h1>Clips</h1>
+          <button class="btn" id="new-clip-btn">+ New Clip</button>
+        </div>
+        <div id="clips-content"></div>
+      </div>
+
+      <!-- Clip Detail -->
+      <div id="page-clip-detail" class="page">
+        <button class="detail-back" id="clip-detail-back">&larr; Back to clips</button>
+        <div id="clip-detail-content"></div>
       </div>
 
       <!-- Calendar -->
@@ -620,6 +738,8 @@
       else if (page === 'calendar') renderCalendar();
       else if (page === 'log') setupLogForm();
       else if (page === 'videos') renderVideosPage();
+      else if (page === 'clips') renderClipsPage();
+      else if (page === 'clip-detail') { /* rendered by showClipDetail */ }
     };
 
     // ===================== HELPERS =====================
@@ -650,12 +770,10 @@
     function renderDashboard() {
       Promise.all([
         api.get('/api/sessions'),
-        api.get('/api/skills'),
         api.get('/api/goals')
       ]).then(function(results) {
         var sessions = results[0];
-        var skills = results[1];
-        var goals = results[2];
+        var goals = results[1];
         var now = new Date();
         var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -695,23 +813,10 @@
           '<div class="stat-card"><div class="label">Avg session</div><div class="value">' + avgMin + ' min</div><div class="sub">' + (prevAvg ? (avgMin >= prevAvg ? 'up from ' + prevAvg : 'down from ' + prevAvg) : '') + '</div></div>' +
           '<div class="stat-card"><div class="label">Focus areas</div><div class="value">' + focusSet.size + '</div><div class="sub">active drills</div></div>';
 
-        renderSkillsCard(skills);
         renderStreakCard(sessions);
         renderRecentCard(sessions);
         renderGoalsCard(goals, thisMonth.length);
       });
-    }
-
-    function renderSkillsCard(skills) {
-      var html = '<div class="card-title">Skill ratings</div>';
-      skills.forEach(function(sk) {
-        var pct = (sk.value / 10) * 100;
-        html += '<div class="skill-row"><div class="skill-label">' + sk.name + '</div>' +
-          '<div class="skill-bar-track"><div class="skill-bar-fill" style="width:' + pct + '%;background:' + sk.color + '"></div></div>' +
-          '<div class="skill-val">' + sk.value.toFixed(1) + '</div></div>';
-      });
-      html += '<button class="card-action" onclick="openSkillsModal()">Update ratings &#8599;</button>';
-      document.getElementById('card-skills').innerHTML = html;
     }
 
     function renderStreakCard(sessions) {
@@ -801,38 +906,6 @@
       html += '<button class="card-action" onclick="openGoalModal()">Add goal &#8599;</button>';
       document.getElementById('card-goals').innerHTML = html;
     }
-
-    // ===================== SKILLS MODAL =====================
-    window.openSkillsModal = function() {
-      api.get('/api/skills').then(function(skills) {
-        var rows = skills.map(function(sk) {
-          return '<div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
-            '<label style="width:80px;margin:0;text-transform:none;font-size:13px">' + sk.name + '</label>' +
-            '<input type="number" step="0.1" min="0" max="10" value="' + sk.value + '" data-skill-id="' + sk.id + '" style="width:70px;text-align:center"></div>';
-        }).join('');
-
-        var overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.innerHTML = '<div class="modal"><h3>Update Skill Ratings</h3>' + rows +
-          '<div class="btn-row"><button class="btn" id="modal-save-skills">Save</button>' +
-          '<button class="btn btn-secondary" id="modal-cancel-skills">Cancel</button></div></div>';
-        document.getElementById('modal-root').appendChild(overlay);
-
-        overlay.querySelector('#modal-cancel-skills').onclick = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-
-        overlay.querySelector('#modal-save-skills').onclick = function() {
-          var updated = [];
-          overlay.querySelectorAll('input[data-skill-id]').forEach(function(inp) {
-            updated.push({ id: parseInt(inp.dataset.skillId), value: Math.min(10, Math.max(0, parseFloat(inp.value) || 0)) });
-          });
-          api.put('/api/skills', updated).then(function() {
-            overlay.remove();
-            renderDashboard();
-          });
-        };
-      });
-    };
 
     // ===================== GOALS MODAL =====================
     window.openGoalModal = function() {
@@ -947,6 +1020,8 @@
 
         html += '<div class="video-section card" id="detail-videos"><div class="card-title">Videos</div><div id="detail-video-grid" class="video-grid"><div class="empty-state" style="padding:16px"><p>Loading videos...</p></div></div></div>';
 
+        html += '<div class="yt-section card" id="detail-youtube"><div class="card-title">YouTube Videos</div><div id="detail-yt-grid"><div class="empty-state" style="padding:16px"><p>Loading...</p></div></div></div>';
+
         html += '<div class="btn-row" style="margin-top:14px">' +
           '<button class="btn btn-secondary" onclick="editSession(\'' + s.id + '\')">Edit</button>' +
           '<button class="btn btn-danger" onclick="confirmDelete(\'' + s.id + '\')">Delete</button></div>';
@@ -967,6 +1042,20 @@
               '<div class="video-info"><div><div class="video-name">' + escapeHTML(v.name) + '</div>' +
               '<div class="video-size">' + formatSize(v.size) + '</div></div>' +
               '<button class="video-delete" onclick="deleteVideo(\'' + v.id + '\', \'' + id + '\')" title="Delete video">&times;</button></div></div>';
+          }).join('');
+        });
+
+        // Load YouTube videos
+        api.get('/api/youtube?sessionId=' + id).then(function(ytVideos) {
+          var ytGrid = document.getElementById('detail-yt-grid');
+          if (!ytVideos.length) {
+            ytGrid.innerHTML = '<div class="empty-state" style="padding:16px"><p>No YouTube videos linked</p></div>';
+            return;
+          }
+          ytGrid.innerHTML = ytVideos.map(function(v) {
+            return '<div class="yt-card" onclick="window.open(\'' + escapeHTML(v.url) + '\', \'_blank\')">' +
+              '<img src="https://img.youtube.com/vi/' + escapeHTML(v.youtube_id) + '/mqdefault.jpg" alt="">' +
+              '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || 'Untitled') + '</div></div></div>';
           }).join('');
         });
       });
@@ -1096,7 +1185,9 @@
 
     function setupLogForm() {
       pendingFiles = [];
+      pendingYouTubeVideos = [];
       renderPendingPreviews();
+      renderYtPreviews();
 
       if (editingId) {
         api.get('/api/sessions/' + editingId).then(function(s) {
@@ -1118,12 +1209,13 @@
       editingId = null;
       document.getElementById('log-title').textContent = 'Log Session';
       document.getElementById('f-date').value = fmt(new Date());
-      document.getElementById('f-type').value = 'practice';
+      document.getElementById('f-type').value = 'rally';
       document.getElementById('f-duration').value = '';
       document.getElementById('f-intensity').value = 'medium';
       document.getElementById('f-focus').value = '';
       document.getElementById('f-score').value = '';
       document.getElementById('f-notes').value = '';
+      document.getElementById('f-youtube-url').value = '';
       selectedRating = 0;
       updateStars();
       document.getElementById('cancel-edit').style.display = 'none';
@@ -1162,6 +1254,8 @@
         api.put('/api/sessions/' + editingId, data).then(function() {
           return uploadVideos(editingId);
         }).then(function() {
+          return saveYouTubeVideos(editingId);
+        }).then(function() {
           saveBtn.textContent = 'Save Session';
           saveBtn.disabled = false;
           editingId = null;
@@ -1169,7 +1263,9 @@
         });
       } else {
         api.post('/api/sessions', data).then(function(session) {
-          return uploadVideos(session.id).then(function() { return session; });
+          return uploadVideos(session.id).then(function() {
+            return saveYouTubeVideos(session.id);
+          }).then(function() { return session; });
         }).then(function() {
           saveBtn.textContent = 'Save Session';
           saveBtn.disabled = false;
@@ -1245,6 +1341,242 @@
         document.getElementById('cal-day-sessions').style.display = 'none';
       });
     }
+
+    // ===================== YOUTUBE IMPORT IN LOG FORM =====================
+    var pendingYouTubeVideos = [];
+
+    function parseYouTubeId(url) {
+      var match = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    document.getElementById('add-yt-btn').addEventListener('click', function() {
+      var input = document.getElementById('f-youtube-url');
+      var url = input.value.trim();
+      if (!url) return;
+      var ytId = parseYouTubeId(url);
+      if (!ytId) {
+        var errEl = document.getElementById('form-error');
+        errEl.textContent = 'Invalid YouTube URL';
+        errEl.style.display = 'inline';
+        setTimeout(function() { errEl.style.display = 'none'; }, 3000);
+        return;
+      }
+      pendingYouTubeVideos.push({ url: url, youtubeId: ytId, title: '' });
+      input.value = '';
+      renderYtPreviews();
+    });
+
+    function renderYtPreviews() {
+      var container = document.getElementById('yt-previews');
+      if (!pendingYouTubeVideos.length) { container.innerHTML = ''; return; }
+      container.innerHTML = pendingYouTubeVideos.map(function(v, i) {
+        return '<div class="yt-preview-item">' +
+          '<img src="https://img.youtube.com/vi/' + v.youtubeId + '/default.jpg" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:4px">' +
+          '<input type="text" placeholder="Video title (optional)" value="' + escapeHTML(v.title) + '" data-yt-idx="' + i + '" style="flex:1">' +
+          '<button type="button" class="remove-btn" data-yt-rm="' + i + '">&times;</button></div>';
+      }).join('');
+      container.querySelectorAll('[data-yt-idx]').forEach(function(inp) {
+        inp.addEventListener('input', function() {
+          pendingYouTubeVideos[parseInt(inp.dataset.ytIdx)].title = inp.value;
+        });
+      });
+      container.querySelectorAll('[data-yt-rm]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          pendingYouTubeVideos.splice(parseInt(btn.dataset.ytRm), 1);
+          renderYtPreviews();
+        });
+      });
+    }
+
+    function saveYouTubeVideos(sessionId) {
+      if (!pendingYouTubeVideos.length) return Promise.resolve();
+      var promises = pendingYouTubeVideos.map(function(v) {
+        return api.post('/api/youtube', { url: v.url, title: v.title, sessionId: sessionId });
+      });
+      return Promise.all(promises);
+    }
+
+    // ===================== CLIPS PAGE =====================
+    function renderClipsPage() {
+      var content = document.getElementById('clips-content');
+      content.innerHTML = '<div class="empty-state"><p>Loading clips...</p></div>';
+
+      api.get('/api/clips').then(function(clips) {
+        if (!clips.length) {
+          content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M10 8l6 4-6 4V8z"/></svg></div><p>No clips yet. Create a clip from a YouTube video to get started.</p></div></div>';
+          return;
+        }
+        var html = '<div class="clips-grid">';
+        clips.forEach(function(c) {
+          var duration = (c.end_time - c.start_time);
+          var mins = Math.floor(duration / 60);
+          var secs = duration % 60;
+          var durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
+          html += '<div class="clip-card" data-clip-id="' + c.id + '">' +
+            '<img src="https://img.youtube.com/vi/' + escapeHTML(c.youtube_id) + '/mqdefault.jpg" alt="">' +
+            '<div class="clip-info"><div class="clip-title">' + escapeHTML(c.title) + '</div>' +
+            '<div class="clip-meta">' + escapeHTML(c.video_title || 'Untitled') + ' &middot; ' + durStr + '</div></div></div>';
+        });
+        html += '</div>';
+        content.innerHTML = html;
+        content.querySelectorAll('.clip-card').forEach(function(card) {
+          card.addEventListener('click', function() { showClipDetail(card.dataset.clipId); });
+        });
+      });
+    }
+
+    document.getElementById('new-clip-btn').addEventListener('click', function() { showNewClipModal(); });
+
+    function showNewClipModal() {
+      api.get('/api/youtube').then(function(ytVideos) {
+        var overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        var videoOptions = ytVideos.map(function(v) {
+          return '<option value="' + v.id + '">' + escapeHTML(v.title || v.youtube_id) + '</option>';
+        }).join('');
+        if (!ytVideos.length) {
+          videoOptions = '<option value="">No YouTube videos available</option>';
+        }
+        overlay.innerHTML = '<div class="modal" style="max-width:460px">' +
+          '<h3>Create Clip</h3>' +
+          '<div class="form-group" style="margin-bottom:12px"><label>YouTube Video</label><select id="clip-yt-select" style="width:100%">' + videoOptions + '</select></div>' +
+          '<div class="form-group" style="margin-bottom:12px"><label>Clip Title</label><input type="text" id="clip-title" placeholder="e.g. Backhand winner"></div>' +
+          '<div style="display:flex;gap:10px;margin-bottom:12px">' +
+          '<div class="form-group" style="flex:1"><label>Start Time (seconds)</label><input type="number" id="clip-start" min="0" value="0"></div>' +
+          '<div class="form-group" style="flex:1"><label>End Time (seconds)</label><input type="number" id="clip-end" min="1" value="10"></div></div>' +
+          '<div class="form-group" style="margin-bottom:16px"><label>Notes (optional)</label><textarea id="clip-notes" placeholder="What to notice in this clip..."></textarea></div>' +
+          '<span id="clip-form-error" style="color:var(--red);font-size:12px;display:none"></span>' +
+          '<div class="btn-row"><button class="btn" id="clip-save">Create Clip</button>' +
+          '<button class="btn btn-secondary" id="clip-cancel">Cancel</button></div></div>';
+        document.getElementById('modal-root').appendChild(overlay);
+        overlay.querySelector('#clip-cancel').onclick = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+        overlay.querySelector('#clip-save').onclick = function() {
+          var ytVideoId = overlay.querySelector('#clip-yt-select').value;
+          var title = overlay.querySelector('#clip-title').value.trim();
+          var startTime = parseInt(overlay.querySelector('#clip-start').value);
+          var endTime = parseInt(overlay.querySelector('#clip-end').value);
+          var notes = overlay.querySelector('#clip-notes').value.trim();
+          var errEl = overlay.querySelector('#clip-form-error');
+          if (!ytVideoId || !title) {
+            errEl.textContent = 'Please select a video and enter a title.';
+            errEl.style.display = 'inline';
+            return;
+          }
+          if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) {
+            errEl.textContent = 'Start time must be less than end time.';
+            errEl.style.display = 'inline';
+            return;
+          }
+          api.post('/api/clips', {
+            youtubeVideoId: ytVideoId,
+            title: title,
+            startTime: startTime,
+            endTime: endTime,
+            notes: notes
+          }).then(function(clip) {
+            overlay.remove();
+            showClipDetail(clip.id);
+          });
+        };
+      });
+    }
+
+    // ===================== CLIP DETAIL =====================
+    function showClipDetail(clipId) {
+      api.get('/api/clips/' + clipId).then(function(clip) {
+        if (!clip || clip.error) return;
+
+        var duration = clip.end_time - clip.start_time;
+        var mins = Math.floor(duration / 60);
+        var secs = duration % 60;
+        var durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
+
+        var startMins = Math.floor(clip.start_time / 60);
+        var startSecs = clip.start_time % 60;
+        var endMins = Math.floor(clip.end_time / 60);
+        var endSecs = clip.end_time % 60;
+        var timeStr = startMins + ':' + String(startSecs).padStart(2, '0') + ' - ' + endMins + ':' + String(endSecs).padStart(2, '0');
+
+        var embedUrl = 'https://www.youtube.com/embed/' + clip.youtube_id + '?start=' + clip.start_time + '&end=' + clip.end_time + '&autoplay=0';
+
+        var html = '<h1>' + escapeHTML(clip.title) + '</h1>' +
+          '<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">' + escapeHTML(clip.video_title || 'Untitled video') + ' &middot; ' + timeStr + ' (' + durStr + ')</div>' +
+          '<div class="clip-detail-player"><iframe src="' + embedUrl + '" frameborder="0" allowfullscreen></iframe></div>';
+
+        if (clip.notes) {
+          html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(clip.notes) + '</div></div></div>';
+        }
+
+        html += '<div class="card"><div class="card-title">Comments</div>' +
+          '<div class="comment-thread" id="clip-comments"><div class="empty-state" style="padding:8px"><p>Loading comments...</p></div></div>' +
+          '<div class="comment-input"><textarea id="comment-text" placeholder="Add a comment..."></textarea>' +
+          '<button class="btn" id="add-comment-btn">Post</button></div></div>';
+
+        html += '<div class="btn-row" style="margin-top:14px">' +
+          '<button class="btn btn-danger" id="delete-clip-btn">Delete Clip</button></div>';
+
+        document.getElementById('clip-detail-content').innerHTML = html;
+        navigate('clip-detail');
+
+        loadClipComments(clipId);
+
+        document.getElementById('add-comment-btn').addEventListener('click', function() {
+          var text = document.getElementById('comment-text').value.trim();
+          if (!text) return;
+          api.post('/api/clips/' + clipId + '/comments', { text: text }).then(function() {
+            document.getElementById('comment-text').value = '';
+            loadClipComments(clipId);
+          });
+        });
+
+        document.getElementById('delete-clip-btn').addEventListener('click', function() {
+          var delOverlay = document.createElement('div');
+          delOverlay.className = 'modal-overlay';
+          delOverlay.innerHTML = '<div class="modal"><h3>Delete clip?</h3>' +
+            '<p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">This will also delete all comments. This cannot be undone.</p>' +
+            '<div class="btn-row"><button class="btn btn-danger" id="modal-del-clip">Delete</button>' +
+            '<button class="btn btn-secondary" id="modal-cancel-clip">Cancel</button></div></div>';
+          document.getElementById('modal-root').appendChild(delOverlay);
+          delOverlay.querySelector('#modal-cancel-clip').onclick = function() { delOverlay.remove(); };
+          delOverlay.addEventListener('click', function(e) { if (e.target === delOverlay) delOverlay.remove(); });
+          delOverlay.querySelector('#modal-del-clip').onclick = function() {
+            api.del('/api/clips/' + clipId).then(function() {
+              delOverlay.remove();
+              navigate('clips');
+            });
+          };
+        });
+      });
+    }
+
+    function loadClipComments(clipId) {
+      api.get('/api/clips/' + clipId + '/comments').then(function(comments) {
+        var container = document.getElementById('clip-comments');
+        if (!comments.length) {
+          container.innerHTML = '<div class="empty-state" style="padding:8px"><p style="font-size:12px">No comments yet</p></div>';
+          return;
+        }
+        container.innerHTML = comments.map(function(c) {
+          var time = c.created_at ? new Date(c.created_at + 'Z').toLocaleString() : '';
+          return '<div class="comment-item">' +
+            '<div class="comment-text">' + escapeHTML(c.text) + '</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<div class="comment-time">' + time + '</div>' +
+            '<button class="comment-del" data-comment-id="' + c.id + '" title="Delete">&times;</button></div></div>';
+        }).join('');
+        container.querySelectorAll('.comment-del').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            api.del('/api/clips/' + clipId + '/comments/' + btn.dataset.commentId).then(function() {
+              loadClipComments(clipId);
+            });
+          });
+        });
+      });
+    }
+
+    document.getElementById('clip-detail-back').addEventListener('click', function() { navigate('clips'); });
 
     // ===================== INIT =====================
     renderDashboard();

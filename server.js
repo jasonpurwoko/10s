@@ -15,9 +15,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/sessions', require('./routes/sessions'));
-app.use('/api/skills', require('./routes/skills'));
 app.use('/api/goals', require('./routes/goals'));
 app.use('/api/videos', require('./routes/videos'));
+app.use('/api/youtube', require('./routes/youtube'));
+app.use('/api/clips', require('./routes/clips'));
 
 app.listen(PORT, function() {
   console.log('10s server running on http://localhost:' + PORT);

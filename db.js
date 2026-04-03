@@ -21,13 +21,6 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS skills (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    value REAL DEFAULT 5.0,
-    color TEXT NOT NULL
-  );
-
   CREATE TABLE IF NOT EXISTS goals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     text TEXT NOT NULL,
@@ -35,6 +28,32 @@ db.exec(`
     status TEXT DEFAULT 'not started',
     metric TEXT DEFAULT '',
     target INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS youtube_videos (
+    id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    youtube_id TEXT NOT NULL,
+    title TEXT DEFAULT '',
+    session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS clips (
+    id TEXT PRIMARY KEY,
+    youtube_video_id TEXT NOT NULL REFERENCES youtube_videos(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    start_time INTEGER NOT NULL,
+    end_time INTEGER NOT NULL,
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS clip_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clip_id TEXT NOT NULL REFERENCES clips(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS videos (
@@ -47,16 +66,5 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
-
-// Seed default skills if empty
-var count = db.prepare('SELECT COUNT(*) as c FROM skills').get().c;
-if (count === 0) {
-  var insert = db.prepare('INSERT INTO skills (name, value, color) VALUES (?, ?, ?)');
-  insert.run('Serve', 5.0, 'var(--blue)');
-  insert.run('Forehand', 5.0, 'var(--green)');
-  insert.run('Backhand', 5.0, 'var(--purple)');
-  insert.run('Footwork', 5.0, 'var(--orange)');
-  insert.run('Net play', 5.0, 'var(--red)');
-}
 
 module.exports = db;
