@@ -67,4 +67,11 @@ db.exec(`
   );
 `);
 
+// Migration: add author column to clip_comments
+var columns = db.pragma('table_info(clip_comments)');
+var hasAuthor = columns.some(function(c) { return c.name === 'author'; });
+if (!hasAuthor) {
+  db.exec("ALTER TABLE clip_comments ADD COLUMN author TEXT NOT NULL DEFAULT 'Anonymous'");
+}
+
 module.exports = db;

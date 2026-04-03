@@ -4,6 +4,7 @@ var multer = require('multer');
 var path = require('path');
 var fs = require('fs');
 var db = require('../db');
+var requireAdmin = require('../middleware/auth').requireAdmin;
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -36,7 +37,7 @@ router.get('/', function(req, res) {
 });
 
 // POST upload videos
-router.post('/', upload.array('videos', 20), function(req, res) {
+router.post('/', requireAdmin, upload.array('videos', 20), function(req, res) {
   var sessionId = req.body.sessionId;
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
 
@@ -69,7 +70,7 @@ router.post('/', upload.array('videos', 20), function(req, res) {
 });
 
 // DELETE one video
-router.delete('/:id', function(req, res) {
+router.delete('/:id', requireAdmin, function(req, res) {
   var video = db.prepare('SELECT * FROM videos WHERE id = ?').get(req.params.id);
   if (!video) return res.status(404).json({ error: 'Not found' });
 

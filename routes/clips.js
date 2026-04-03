@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var db = require('../db');
+var requireAdmin = require('../middleware/auth').requireAdmin;
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -29,7 +30,7 @@ router.get('/:id', function(req, res) {
 });
 
 // POST create clip
-router.post('/', function(req, res) {
+router.post('/', requireAdmin, function(req, res) {
   var b = req.body;
   if (!b.youtubeVideoId || b.startTime === undefined || b.endTime === undefined || !b.title) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -52,7 +53,7 @@ router.post('/', function(req, res) {
 });
 
 // PUT update clip
-router.put('/:id', function(req, res) {
+router.put('/:id', requireAdmin, function(req, res) {
   var existing = db.prepare('SELECT * FROM clips WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Not found' });
   var b = req.body;
@@ -70,7 +71,7 @@ router.put('/:id', function(req, res) {
 });
 
 // DELETE clip
-router.delete('/:id', function(req, res) {
+router.delete('/:id', requireAdmin, function(req, res) {
   db.prepare('DELETE FROM clips WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -82,16 +83,17 @@ router.get('/:id/comments', function(req, res) {
   res.json(db.prepare('SELECT * FROM clip_comments WHERE clip_id = ? ORDER BY created_at ASC').all(req.params.id));
 });
 
-// POST add comment
+// POST add comment (public — requires author name)
 router.post('/:id/comments', function(req, res) {
   var b = req.body;
   if (!b.text) return res.status(400).json({ error: 'text required' });
-  var result = db.prepare('INSERT INTO clip_comments (clip_id, text) VALUES (?, ?)').run(req.params.id, b.text);
+  if (!b.author || !b.author.trim()) return res.status(400).json({ error: 'author required' });
+  var result = db.prepare('INSERT INTO clip_comments (clip_id, text, author) VALUES (?, ?, ?)').run(req.params.id, b.text, b.author.trim());
   res.json(db.prepare('SELECT * FROM clip_comments WHERE id = ?').get(result.lastInsertRowid));
 });
 
 // DELETE a comment
-router.delete('/:clipId/comments/:commentId', function(req, res) {
+router.delete('/:clipId/comments/:commentId', requireAdmin, function(req, res) {
   db.prepare('DELETE FROM clip_comments WHERE id = ? AND clip_id = ?').run(req.params.commentId, req.params.clipId);
   res.json({ ok: true });
 });

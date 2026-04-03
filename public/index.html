@@ -548,6 +548,10 @@
           <span>Calendar</span>
         </button>
       </nav>
+      <button id="admin-toggle" style="margin-top:auto;background:none;border:none;color:var(--text-muted);font-size:13px;padding:9px 12px;border-radius:7px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:9px;font-family:inherit;width:100%">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Admin</span>
+      </button>
     </aside>
 
     <main class="main">
@@ -719,6 +723,67 @@
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
+    // ===================== AUTH =====================
+    var isAdmin = false;
+
+    function checkAuth() {
+      return api.get('/api/auth/status').then(function(data) {
+        isAdmin = data.isAdmin;
+        applyAdminVisibility();
+      });
+    }
+
+    function applyAdminVisibility() {
+      var logNav = document.querySelector('nav button[data-page="log"]');
+      logNav.style.display = isAdmin ? '' : 'none';
+
+      var newClipBtn = document.getElementById('new-clip-btn');
+      newClipBtn.style.display = isAdmin ? '' : 'none';
+
+      var adminBtn = document.getElementById('admin-toggle');
+      adminBtn.querySelector('span').textContent = isAdmin ? 'Logout' : 'Admin';
+    }
+
+    document.getElementById('admin-toggle').addEventListener('click', function() {
+      if (isAdmin) {
+        api.post('/api/auth/logout', {}).then(function() {
+          isAdmin = false;
+          applyAdminVisibility();
+          navigate(currentPage);
+        });
+        return;
+      }
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal"><h3>Admin Login</h3>' +
+        '<div class="form-group" style="margin-bottom:12px"><label>Password</label>' +
+        '<input type="password" id="admin-pw" placeholder="Enter admin password"></div>' +
+        '<span id="admin-error" style="color:var(--red);font-size:12px;display:none"></span>' +
+        '<div class="btn-row"><button class="btn" id="admin-login-btn">Login</button>' +
+        '<button class="btn btn-secondary" id="admin-cancel-btn">Cancel</button></div></div>';
+      document.getElementById('modal-root').appendChild(overlay);
+      overlay.querySelector('#admin-cancel-btn').onclick = function() { overlay.remove(); };
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      overlay.querySelector('#admin-login-btn').onclick = function() {
+        var pw = overlay.querySelector('#admin-pw').value;
+        api.post('/api/auth/login', { password: pw }).then(function(data) {
+          if (data.ok) {
+            isAdmin = true;
+            overlay.remove();
+            applyAdminVisibility();
+            navigate(currentPage);
+          } else {
+            var err = overlay.querySelector('#admin-error');
+            err.textContent = data.error || 'Wrong password';
+            err.style.display = 'block';
+          }
+        });
+      };
+      overlay.querySelector('#admin-pw').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') overlay.querySelector('#admin-login-btn').click();
+      });
+    });
+
     // ===================== NAV =====================
     var currentPage = 'dashboard';
     var editingId = null;
@@ -729,6 +794,7 @@
     });
 
     window.navigate = function(page) {
+      if (page === 'log' && !isAdmin) { navigate('dashboard'); return; }
       currentPage = page;
       document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
       document.getElementById('page-' + page).classList.add('active');
@@ -878,7 +944,7 @@
             '<div class="dur">' + s.duration + ' min</div></div>';
         });
       }
-      html += '<button class="card-action" onclick="navigate(\'log\')">Log session &#8599;</button>';
+      if (isAdmin) html += '<button class="card-action" onclick="navigate(\'log\')">Log session &#8599;</button>';
       document.getElementById('card-recent').innerHTML = html;
 
       document.getElementById('card-recent').querySelectorAll('.session-row').forEach(function(el) {
@@ -898,12 +964,14 @@
             badge = '<span class="goal-badge counter">' + current + ' / ' + g.target + '</span>';
           } else {
             var cls = g.status === 'done' ? 'done' : g.status === 'in progress' ? 'in-progress' : 'not-started';
-            badge = '<span class="goal-badge ' + cls + '" onclick="cycleGoalStatus(' + g.id + ')" style="cursor:pointer">' + g.status + '</span>';
+            badge = isAdmin
+              ? '<span class="goal-badge ' + cls + '" onclick="cycleGoalStatus(' + g.id + ')" style="cursor:pointer">' + g.status + '</span>'
+              : '<span class="goal-badge ' + cls + '">' + g.status + '</span>';
           }
           html += '<div class="goal-row"><div class="goal-text">' + escapeHTML(g.text) + '</div>' + badge + '</div>';
         });
       }
-      html += '<button class="card-action" onclick="openGoalModal()">Add goal &#8599;</button>';
+      if (isAdmin) html += '<button class="card-action" onclick="openGoalModal()">Add goal &#8599;</button>';
       document.getElementById('card-goals').innerHTML = html;
     }
 
@@ -1022,9 +1090,11 @@
 
         html += '<div class="yt-section card" id="detail-youtube"><div class="card-title">YouTube Videos</div><div id="detail-yt-grid"><div class="empty-state" style="padding:16px"><p>Loading...</p></div></div></div>';
 
-        html += '<div class="btn-row" style="margin-top:14px">' +
-          '<button class="btn btn-secondary" onclick="editSession(\'' + s.id + '\')">Edit</button>' +
-          '<button class="btn btn-danger" onclick="confirmDelete(\'' + s.id + '\')">Delete</button></div>';
+        if (isAdmin) {
+          html += '<div class="btn-row" style="margin-top:14px">' +
+            '<button class="btn btn-secondary" onclick="editSession(\'' + s.id + '\')">Edit</button>' +
+            '<button class="btn btn-danger" onclick="confirmDelete(\'' + s.id + '\')">Delete</button></div>';
+        }
 
         document.getElementById('detail-content').innerHTML = html;
         navigate('detail');
@@ -1041,7 +1111,7 @@
               '<video src="/uploads/' + v.filename + '" controls preload="metadata"></video>' +
               '<div class="video-info"><div><div class="video-name">' + escapeHTML(v.name) + '</div>' +
               '<div class="video-size">' + formatSize(v.size) + '</div></div>' +
-              '<button class="video-delete" onclick="deleteVideo(\'' + v.id + '\', \'' + id + '\')" title="Delete video">&times;</button></div></div>';
+              (isAdmin ? '<button class="video-delete" onclick="deleteVideo(\'' + v.id + '\', \'' + id + '\')" title="Delete video">&times;</button>' : '') + '</div></div>';
           }).join('');
         });
 
@@ -1509,13 +1579,19 @@
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(clip.notes) + '</div></div></div>';
         }
 
+        var savedName = '';
+        try { savedName = localStorage.getItem('10s_commenter') || ''; } catch(e) {}
         html += '<div class="card"><div class="card-title">Comments</div>' +
           '<div class="comment-thread" id="clip-comments"><div class="empty-state" style="padding:8px"><p>Loading comments...</p></div></div>' +
-          '<div class="comment-input"><textarea id="comment-text" placeholder="Add a comment..."></textarea>' +
+          '<div class="comment-input">' +
+          (isAdmin ? '' : '<input type="text" id="comment-author" placeholder="Your name" value="' + escapeHTML(savedName) + '" style="margin-bottom:6px;width:100%">') +
+          '<textarea id="comment-text" placeholder="Add a comment..."></textarea>' +
           '<button class="btn" id="add-comment-btn">Post</button></div></div>';
 
-        html += '<div class="btn-row" style="margin-top:14px">' +
-          '<button class="btn btn-danger" id="delete-clip-btn">Delete Clip</button></div>';
+        if (isAdmin) {
+          html += '<div class="btn-row" style="margin-top:14px">' +
+            '<button class="btn btn-danger" id="delete-clip-btn">Delete Clip</button></div>';
+        }
 
         document.getElementById('clip-detail-content').innerHTML = html;
         navigate('clip-detail');
@@ -1525,13 +1601,20 @@
         document.getElementById('add-comment-btn').addEventListener('click', function() {
           var text = document.getElementById('comment-text').value.trim();
           if (!text) return;
-          api.post('/api/clips/' + clipId + '/comments', { text: text }).then(function() {
+          var author = isAdmin ? 'Admin' : (document.getElementById('comment-author') ? document.getElementById('comment-author').value.trim() : '');
+          if (!author) {
+            var authorInput = document.getElementById('comment-author');
+            if (authorInput) authorInput.style.borderColor = 'var(--red)';
+            return;
+          }
+          api.post('/api/clips/' + clipId + '/comments', { text: text, author: author }).then(function() {
             document.getElementById('comment-text').value = '';
+            try { localStorage.setItem('10s_commenter', author); } catch(e) {}
             loadClipComments(clipId);
           });
         });
 
-        document.getElementById('delete-clip-btn').addEventListener('click', function() {
+        if (isAdmin) document.getElementById('delete-clip-btn').addEventListener('click', function() {
           var delOverlay = document.createElement('div');
           delOverlay.className = 'modal-overlay';
           delOverlay.innerHTML = '<div class="modal"><h3>Delete clip?</h3>' +
@@ -1561,25 +1644,28 @@
         container.innerHTML = comments.map(function(c) {
           var time = c.created_at ? new Date(c.created_at + 'Z').toLocaleString() : '';
           return '<div class="comment-item">' +
+            '<div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:2px">' + escapeHTML(c.author || 'Anonymous') + '</div>' +
             '<div class="comment-text">' + escapeHTML(c.text) + '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center">' +
             '<div class="comment-time">' + time + '</div>' +
-            '<button class="comment-del" data-comment-id="' + c.id + '" title="Delete">&times;</button></div></div>';
+            (isAdmin ? '<button class="comment-del" data-comment-id="' + c.id + '" title="Delete">&times;</button>' : '') + '</div></div>';
         }).join('');
-        container.querySelectorAll('.comment-del').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            api.del('/api/clips/' + clipId + '/comments/' + btn.dataset.commentId).then(function() {
-              loadClipComments(clipId);
+        if (isAdmin) {
+          container.querySelectorAll('.comment-del').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              api.del('/api/clips/' + clipId + '/comments/' + btn.dataset.commentId).then(function() {
+                loadClipComments(clipId);
+              });
             });
           });
-        });
+        }
       });
     }
 
     document.getElementById('clip-detail-back').addEventListener('click', function() { navigate('clips'); });
 
     // ===================== INIT =====================
-    renderDashboard();
+    checkAuth().then(function() { renderDashboard(); });
   </script>
 </body>
 </html>

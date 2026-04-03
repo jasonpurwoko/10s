@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var db = require('../db');
+var requireAdmin = require('../middleware/auth').requireAdmin;
 
 // GET all goals
 router.get('/', function(req, res) {
@@ -8,7 +9,7 @@ router.get('/', function(req, res) {
 });
 
 // POST create goal
-router.post('/', function(req, res) {
+router.post('/', requireAdmin, function(req, res) {
   var b = req.body;
   var result = db.prepare(
     'INSERT INTO goals (text, type, status, metric, target) VALUES (?, ?, ?, ?, ?)'
@@ -17,7 +18,7 @@ router.post('/', function(req, res) {
 });
 
 // PUT update goal
-router.put('/:id', function(req, res) {
+router.put('/:id', requireAdmin, function(req, res) {
   var existing = db.prepare('SELECT * FROM goals WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Not found' });
 
@@ -34,7 +35,7 @@ router.put('/:id', function(req, res) {
 });
 
 // DELETE goal
-router.delete('/:id', function(req, res) {
+router.delete('/:id', requireAdmin, function(req, res) {
   db.prepare('DELETE FROM goals WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });

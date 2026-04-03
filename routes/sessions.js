@@ -3,6 +3,7 @@ var router = express.Router();
 var db = require('../db');
 var fs = require('fs');
 var path = require('path');
+var requireAdmin = require('../middleware/auth').requireAdmin;
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -22,7 +23,7 @@ router.get('/:id', function(req, res) {
 });
 
 // POST create session
-router.post('/', function(req, res) {
+router.post('/', requireAdmin, function(req, res) {
   var b = req.body;
   var id = genId();
   db.prepare(
@@ -33,7 +34,7 @@ router.post('/', function(req, res) {
 });
 
 // PUT update session
-router.put('/:id', function(req, res) {
+router.put('/:id', requireAdmin, function(req, res) {
   var existing = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Not found' });
 
@@ -56,7 +57,7 @@ router.put('/:id', function(req, res) {
 });
 
 // DELETE session (cascade deletes videos from DB; we also remove files)
-router.delete('/:id', function(req, res) {
+router.delete('/:id', requireAdmin, function(req, res) {
   var videos = db.prepare('SELECT filename FROM videos WHERE session_id = ?').all(req.params.id);
   videos.forEach(function(v) {
     var fp = path.join(__dirname, '..', 'uploads', v.filename);
