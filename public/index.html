@@ -535,10 +535,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           <span>Sessions</span>
         </button>
-        <button data-page="videos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          <span>Videos</span>
-        </button>
         <button data-page="clips">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M10 8l6 4-6 4V8z"/></svg>
           <span>Clips</span>
@@ -598,21 +594,6 @@
               <input type="text" id="f-score" placeholder="e.g. 6-4, 3-6, 7-5">
             </div>
             <div class="form-group full">
-              <label>Session Videos</label>
-              <div class="upload-zone" id="upload-zone">
-                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <polygon points="23 7 16 12 23 17 23 7"/>
-                  <rect x="1" y="5" width="15" height="14" rx="2"/>
-                  <line x1="8" y1="9" x2="8" y2="15" stroke-width="2"/>
-                  <line x1="5" y1="12" x2="11" y2="12" stroke-width="2"/>
-                </svg>
-                <p>Drop video files here or click to browse</p>
-                <div class="hint">MP4, MOV, WebM supported</div>
-                <input type="file" id="f-videos" accept="video/*" multiple>
-              </div>
-              <div class="upload-preview-list" id="upload-previews"></div>
-            </div>
-            <div class="form-group full">
               <label>YouTube Videos</label>
               <div class="yt-import-row">
                 <input type="text" id="f-youtube-url" placeholder="Paste YouTube URL...">
@@ -637,12 +618,6 @@
       <div id="page-sessions" class="page">
         <h1>All Sessions</h1>
         <div class="card" id="all-sessions"></div>
-      </div>
-
-      <!-- Videos Gallery -->
-      <div id="page-videos" class="page">
-        <h1>Videos</h1>
-        <div id="videos-content"></div>
       </div>
 
       <!-- Session Detail -->
@@ -785,7 +760,6 @@
       else if (page === 'sessions') renderAllSessions();
       else if (page === 'calendar') renderCalendar();
       else if (page === 'log') setupLogForm();
-      else if (page === 'videos') renderVideosPage();
       else if (page === 'clips') renderClipsPage();
       else if (page === 'clip-detail') { /* rendered by showClipDetail */ }
     };
@@ -1062,8 +1036,6 @@
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(s.notes) + '</div></div></div>';
         }
 
-        html += '<div class="video-section card" id="detail-videos"><div class="card-title">Videos</div><div id="detail-video-grid" class="video-grid"><div class="empty-state" style="padding:16px"><p>Loading videos...</p></div></div></div>';
-
         html += '<div class="yt-section card" id="detail-youtube"><div class="card-title">YouTube Videos</div><div id="detail-yt-grid"><div class="empty-state" style="padding:16px"><p>Loading...</p></div></div></div>';
 
         if (isAdmin) {
@@ -1074,22 +1046,6 @@
 
         document.getElementById('detail-content').innerHTML = html;
         navigate('detail');
-
-        // Load videos
-        api.get('/api/videos?sessionId=' + id).then(function(videos) {
-          var grid = document.getElementById('detail-video-grid');
-          if (!videos.length) {
-            grid.innerHTML = '<div class="empty-state" style="padding:16px"><p>No videos for this session</p></div>';
-            return;
-          }
-          grid.innerHTML = videos.map(function(v) {
-            return '<div class="video-card">' +
-              '<video src="/uploads/' + v.filename + '" controls preload="metadata"></video>' +
-              '<div class="video-info"><div><div class="video-name">' + escapeHTML(v.name) + '</div>' +
-              '<div class="video-size">' + formatSize(v.size) + '</div></div>' +
-              (isAdmin ? '<button class="video-delete" onclick="deleteVideo(\'' + v.id + '\', \'' + id + '\')" title="Delete video">&times;</button>' : '') + '</div></div>';
-          }).join('');
-        });
 
         // Load YouTube videos
         api.get('/api/youtube?sessionId=' + id).then(function(ytVideos) {
@@ -1106,12 +1062,6 @@
         });
       });
     }
-
-    window.deleteVideo = function(videoId, sessionId) {
-      api.del('/api/videos/' + videoId).then(function() {
-        showDetail(sessionId);
-      });
-    };
 
     document.getElementById('detail-back').addEventListener('click', function() { navigate('sessions'); });
 
@@ -1134,91 +1084,9 @@
       };
     };
 
-    // ===================== VIDEOS PAGE =====================
-    function renderVideosPage() {
-      var content = document.getElementById('videos-content');
-      content.innerHTML = '<div class="empty-state"><p>Loading videos...</p></div>';
-
-      Promise.all([api.get('/api/videos'), api.get('/api/sessions')]).then(function(results) {
-        var videos = results[0];
-        var sessions = results[1];
-
-        if (!videos.length) {
-          content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><p>No videos yet. Upload videos when logging a session.</p></div></div>';
-          return;
-        }
-
-        var sessionMap = {};
-        sessions.forEach(function(s) { sessionMap[s.id] = s; });
-
-        var html = '<div class="videos-grid">';
-        videos.forEach(function(v) {
-          var s = sessionMap[v.session_id];
-          var sessionInfo = s ? sessionLabel(s) + ' \u2014 ' + shortDate(s.date) : 'Unknown session';
-          html += '<div class="video-thumb-card" data-sid="' + v.session_id + '">' +
-            '<video src="/uploads/' + v.filename + '" preload="metadata" muted></video>' +
-            '<div class="thumb-info"><div class="thumb-name">' + escapeHTML(v.name) + '</div>' +
-            '<div class="thumb-meta">' + sessionInfo + ' &middot; ' + formatSize(v.size) + '</div></div></div>';
-        });
-        html += '</div>';
-        content.innerHTML = html;
-
-        content.querySelectorAll('.video-thumb-card').forEach(function(card) {
-          card.addEventListener('click', function() { showDetail(card.dataset.sid); });
-        });
-      });
-    }
-
-    // ===================== LOG FORM + VIDEO UPLOAD =====================
-    var pendingFiles = [];
-
-    var uploadZone = document.getElementById('upload-zone');
-    var fileInput = document.getElementById('f-videos');
-    var previewList = document.getElementById('upload-previews');
-
-    uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
-    uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('dragover'); });
-    uploadZone.addEventListener('drop', function(e) {
-      e.preventDefault();
-      uploadZone.classList.remove('dragover');
-      addPendingFiles(Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('video/'); }));
-    });
-    fileInput.addEventListener('change', function() { addPendingFiles(Array.from(fileInput.files)); fileInput.value = ''; });
-
-    function addPendingFiles(files) {
-      files.forEach(function(f) { pendingFiles.push(f); });
-      renderPendingPreviews();
-    }
-
-    function renderPendingPreviews() {
-      previewList.innerHTML = pendingFiles.map(function(f, i) {
-        var url = URL.createObjectURL(f);
-        return '<div class="upload-preview-item">' +
-          '<video src="' + url + '" preload="metadata" muted></video>' +
-          '<div class="file-info"><div class="file-name">' + escapeHTML(f.name) + '</div>' +
-          '<div class="file-size">' + formatSize(f.size) + '</div></div>' +
-          '<button type="button" class="remove-btn" data-idx="' + i + '">&times;</button></div>';
-      }).join('');
-      previewList.querySelectorAll('.remove-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          pendingFiles.splice(parseInt(btn.dataset.idx), 1);
-          renderPendingPreviews();
-        });
-      });
-    }
-
-    function uploadVideos(sessionId) {
-      if (!pendingFiles.length) return Promise.resolve();
-      var formData = new FormData();
-      formData.append('sessionId', sessionId);
-      pendingFiles.forEach(function(f) { formData.append('videos', f); });
-      return api.upload('/api/videos', formData);
-    }
-
+    // ===================== LOG FORM =====================
     function setupLogForm() {
-      pendingFiles = [];
       pendingYouTubeVideos = [];
-      renderPendingPreviews();
       renderYtPreviews();
 
       if (editingId) {
@@ -1287,8 +1155,6 @@
       if (editingId) {
         api.put('/api/sessions/' + editingId, data).then(function(result) {
           if (result.error) throw result;
-          return uploadVideos(editingId);
-        }).then(function() {
           return saveYouTubeVideos(editingId);
         }).then(function() {
           saveBtn.textContent = 'Save Session';
@@ -1299,9 +1165,7 @@
       } else {
         api.post('/api/sessions', data).then(function(session) {
           if (session.error) throw session;
-          return uploadVideos(session.id).then(function() {
-            return saveYouTubeVideos(session.id);
-          }).then(function() { return session; });
+          return saveYouTubeVideos(session.id).then(function() { return session; });
         }).then(function() {
           saveBtn.textContent = 'Save Session';
           saveBtn.disabled = false;
