@@ -8,29 +8,31 @@ function genId() {
 }
 
 // GET all clips (optionally by youtubeVideoId)
-router.get('/', function(req, res) {
+router.get('/', async function(req, res) {
   var sql = 'SELECT c.*, y.youtube_id, y.title as video_title, y.url as video_url FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id';
   if (req.query.youtubeVideoId) {
-    sql += ' WHERE c.youtube_video_id = ?';
-    sql += ' ORDER BY c.created_at DESC';
-    res.json(db.prepare(sql).all(req.query.youtubeVideoId));
+    sql += ' WHERE c.youtube_video_id = ? ORDER BY c.created_at DESC';
+    var [rows] = await db.pool.execute(sql, [req.query.youtubeVideoId]);
+    res.json(rows);
   } else {
     sql += ' ORDER BY c.created_at DESC';
-    res.json(db.prepare(sql).all());
+    var [rows] = await db.pool.execute(sql);
+    res.json(rows);
   }
 });
 
 // GET one clip
-router.get('/:id', function(req, res) {
-  var row = db.prepare(
-    'SELECT c.*, y.youtube_id, y.title as video_title, y.url as video_url FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?'
-  ).get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Not found' });
-  res.json(row);
+router.get('/:id', async function(req, res) {
+  var [rows] = await db.pool.execute(
+    'SELECT c.*, y.youtube_id, y.title as video_title, y.url as video_url FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?',
+    [req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
 });
 
 // POST create clip
-router.post('/', requireAdmin, function(req, res) {
+router.post('/', requireAdmin, async function(req, res) {
   var b = req.body;
   if (!b.youtubeVideoId || b.startTime === undefined || b.endTime === undefined || !b.title) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -38,63 +40,69 @@ router.post('/', requireAdmin, function(req, res) {
   if (b.startTime >= b.endTime) {
     return res.status(400).json({ error: 'Start time must be before end time' });
   }
-  var yt = db.prepare('SELECT id FROM youtube_videos WHERE id = ?').get(b.youtubeVideoId);
-  if (!yt) return res.status(400).json({ error: 'YouTube video not found' });
+  var [ytRows] = await db.pool.execute('SELECT id FROM youtube_videos WHERE id = ?', [b.youtubeVideoId]);
+  if (!ytRows.length) return res.status(400).json({ error: 'YouTube video not found' });
 
   var id = genId();
-  db.prepare(
-    'INSERT INTO clips (id, youtube_video_id, title, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, b.youtubeVideoId, b.title, b.startTime, b.endTime, b.notes || '');
+  await db.pool.execute(
+    'INSERT INTO clips (id, youtube_video_id, title, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, b.youtubeVideoId, b.title, b.startTime, b.endTime, b.notes || '']
+  );
 
-  var row = db.prepare(
-    'SELECT c.*, y.youtube_id, y.title as video_title FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?'
-  ).get(id);
-  res.json(row);
+  var [rows] = await db.pool.execute(
+    'SELECT c.*, y.youtube_id, y.title as video_title FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?',
+    [id]
+  );
+  res.json(rows[0]);
 });
 
 // PUT update clip
-router.put('/:id', requireAdmin, function(req, res) {
-  var existing = db.prepare('SELECT * FROM clips WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Not found' });
+router.put('/:id', requireAdmin, async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM clips WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  var existing = rows[0];
   var b = req.body;
-  db.prepare('UPDATE clips SET title=?, start_time=?, end_time=?, notes=? WHERE id=?').run(
+  await db.pool.execute('UPDATE clips SET title=?, start_time=?, end_time=?, notes=? WHERE id=?', [
     b.title !== undefined ? b.title : existing.title,
     b.startTime !== undefined ? b.startTime : existing.start_time,
     b.endTime !== undefined ? b.endTime : existing.end_time,
     b.notes !== undefined ? b.notes : existing.notes,
     req.params.id
+  ]);
+  var [updated] = await db.pool.execute(
+    'SELECT c.*, y.youtube_id, y.title as video_title FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?',
+    [req.params.id]
   );
-  var row = db.prepare(
-    'SELECT c.*, y.youtube_id, y.title as video_title FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?'
-  ).get(req.params.id);
-  res.json(row);
+  res.json(updated[0]);
 });
 
 // DELETE clip
-router.delete('/:id', requireAdmin, function(req, res) {
-  db.prepare('DELETE FROM clips WHERE id = ?').run(req.params.id);
+router.delete('/:id', requireAdmin, async function(req, res) {
+  await db.pool.execute('DELETE FROM clips WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });
 
 // --- Comments ---
 
 // GET comments for a clip
-router.get('/:id/comments', function(req, res) {
-  res.json(db.prepare('SELECT * FROM clip_comments WHERE clip_id = ? ORDER BY created_at ASC').all(req.params.id));
+router.get('/:id/comments', async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM clip_comments WHERE clip_id = ? ORDER BY created_at ASC', [req.params.id]);
+  res.json(rows);
 });
 
 // POST add comment (public — requires author name)
-router.post('/:id/comments', function(req, res) {
+router.post('/:id/comments', async function(req, res) {
   var b = req.body;
   if (!b.text) return res.status(400).json({ error: 'text required' });
   if (!b.author || !b.author.trim()) return res.status(400).json({ error: 'author required' });
-  var result = db.prepare('INSERT INTO clip_comments (clip_id, text, author) VALUES (?, ?, ?)').run(req.params.id, b.text, b.author.trim());
-  res.json(db.prepare('SELECT * FROM clip_comments WHERE id = ?').get(result.lastInsertRowid));
+  var [result] = await db.pool.execute('INSERT INTO clip_comments (clip_id, text, author) VALUES (?, ?, ?)', [req.params.id, b.text, b.author.trim()]);
+  var [rows] = await db.pool.execute('SELECT * FROM clip_comments WHERE id = ?', [result.insertId]);
+  res.json(rows[0]);
 });
 
 // DELETE a comment
-router.delete('/:clipId/comments/:commentId', requireAdmin, function(req, res) {
-  db.prepare('DELETE FROM clip_comments WHERE id = ? AND clip_id = ?').run(req.params.commentId, req.params.clipId);
+router.delete('/:clipId/comments/:commentId', requireAdmin, async function(req, res) {
+  await db.pool.execute('DELETE FROM clip_comments WHERE id = ? AND clip_id = ?', [req.params.commentId, req.params.clipId]);
   res.json({ ok: true });
 });
 

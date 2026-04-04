@@ -10,60 +10,64 @@ function genId() {
 }
 
 // GET all sessions
-router.get('/', function(req, res) {
-  var rows = db.prepare('SELECT * FROM sessions ORDER BY date DESC, created_at DESC').all();
+router.get('/', async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM sessions ORDER BY date DESC, created_at DESC');
   res.json(rows);
 });
 
 // GET one session
-router.get('/:id', function(req, res) {
-  var row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Not found' });
-  res.json(row);
+router.get('/:id', async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM sessions WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
 });
 
 // POST create session
-router.post('/', requireAdmin, function(req, res) {
+router.post('/', requireAdmin, async function(req, res) {
   var b = req.body;
   var id = genId();
-  db.prepare(
-    'INSERT INTO sessions (id, date, type, duration, intensity, focus, rating, score, notes, video_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, b.date, b.type, b.duration, b.intensity || 'medium', b.focus || '', b.rating || 0, b.score || '', b.notes || '', b.videoCount || 0);
-  var session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id);
-  res.json(session);
+  await db.pool.execute(
+    'INSERT INTO sessions (id, date, type, duration, intensity, focus, rating, score, notes, video_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, b.date, b.type, b.duration, b.intensity || 'medium', b.focus || '', b.rating || 0, b.score || '', b.notes || '', b.videoCount || 0]
+  );
+  var [rows] = await db.pool.execute('SELECT * FROM sessions WHERE id = ?', [id]);
+  res.json(rows[0]);
 });
 
 // PUT update session
-router.put('/:id', requireAdmin, function(req, res) {
-  var existing = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Not found' });
+router.put('/:id', requireAdmin, async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM sessions WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  var existing = rows[0];
 
   var b = req.body;
-  db.prepare(
-    'UPDATE sessions SET date=?, type=?, duration=?, intensity=?, focus=?, rating=?, score=?, notes=?, video_count=? WHERE id=?'
-  ).run(
-    b.date !== undefined ? b.date : existing.date,
-    b.type !== undefined ? b.type : existing.type,
-    b.duration !== undefined ? b.duration : existing.duration,
-    b.intensity !== undefined ? b.intensity : existing.intensity,
-    b.focus !== undefined ? b.focus : existing.focus,
-    b.rating !== undefined ? b.rating : existing.rating,
-    b.score !== undefined ? b.score : existing.score,
-    b.notes !== undefined ? b.notes : existing.notes,
-    b.video_count !== undefined ? b.video_count : (b.videoCount !== undefined ? b.videoCount : existing.video_count),
-    req.params.id
+  await db.pool.execute(
+    'UPDATE sessions SET date=?, type=?, duration=?, intensity=?, focus=?, rating=?, score=?, notes=?, video_count=? WHERE id=?',
+    [
+      b.date !== undefined ? b.date : existing.date,
+      b.type !== undefined ? b.type : existing.type,
+      b.duration !== undefined ? b.duration : existing.duration,
+      b.intensity !== undefined ? b.intensity : existing.intensity,
+      b.focus !== undefined ? b.focus : existing.focus,
+      b.rating !== undefined ? b.rating : existing.rating,
+      b.score !== undefined ? b.score : existing.score,
+      b.notes !== undefined ? b.notes : existing.notes,
+      b.video_count !== undefined ? b.video_count : (b.videoCount !== undefined ? b.videoCount : existing.video_count),
+      req.params.id
+    ]
   );
-  res.json(db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id));
+  var [updated] = await db.pool.execute('SELECT * FROM sessions WHERE id = ?', [req.params.id]);
+  res.json(updated[0]);
 });
 
-// DELETE session (cascade deletes videos from DB; we also remove files)
-router.delete('/:id', requireAdmin, function(req, res) {
-  var videos = db.prepare('SELECT filename FROM videos WHERE session_id = ?').all(req.params.id);
+// DELETE session
+router.delete('/:id', requireAdmin, async function(req, res) {
+  var [videos] = await db.pool.execute('SELECT filename FROM videos WHERE session_id = ?', [req.params.id]);
   videos.forEach(function(v) {
     var fp = path.join(__dirname, '..', 'uploads', v.filename);
     try { fs.unlinkSync(fp); } catch(e) {}
   });
-  db.prepare('DELETE FROM sessions WHERE id = ?').run(req.params.id);
+  await db.pool.execute('DELETE FROM sessions WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });
 

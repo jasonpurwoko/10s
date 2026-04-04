@@ -13,50 +13,56 @@ function parseYouTubeId(url) {
 }
 
 // GET all youtube videos (optionally by sessionId)
-router.get('/', function(req, res) {
+router.get('/', async function(req, res) {
   if (req.query.sessionId) {
-    res.json(db.prepare('SELECT * FROM youtube_videos WHERE session_id = ? ORDER BY created_at DESC').all(req.query.sessionId));
+    var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE session_id = ? ORDER BY created_at DESC', [req.query.sessionId]);
+    res.json(rows);
   } else {
-    res.json(db.prepare('SELECT * FROM youtube_videos ORDER BY created_at DESC').all());
+    var [rows] = await db.pool.execute('SELECT * FROM youtube_videos ORDER BY created_at DESC');
+    res.json(rows);
   }
 });
 
 // GET one
-router.get('/:id', function(req, res) {
-  var row = db.prepare('SELECT * FROM youtube_videos WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Not found' });
-  res.json(row);
+router.get('/:id', async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
 });
 
 // POST create
-router.post('/', requireAdmin, function(req, res) {
+router.post('/', requireAdmin, async function(req, res) {
   var b = req.body;
   var ytId = parseYouTubeId(b.url || '');
   if (!ytId) return res.status(400).json({ error: 'Invalid YouTube URL' });
 
   var id = genId();
-  db.prepare(
-    'INSERT INTO youtube_videos (id, url, youtube_id, title, session_id) VALUES (?, ?, ?, ?, ?)'
-  ).run(id, b.url, ytId, b.title || '', b.sessionId || null);
-  res.json(db.prepare('SELECT * FROM youtube_videos WHERE id = ?').get(id));
+  await db.pool.execute(
+    'INSERT INTO youtube_videos (id, url, youtube_id, title, session_id) VALUES (?, ?, ?, ?, ?)',
+    [id, b.url, ytId, b.title || '', b.sessionId || null]
+  );
+  var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE id = ?', [id]);
+  res.json(rows[0]);
 });
 
 // PUT update
-router.put('/:id', requireAdmin, function(req, res) {
-  var existing = db.prepare('SELECT * FROM youtube_videos WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Not found' });
+router.put('/:id', requireAdmin, async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  var existing = rows[0];
   var b = req.body;
-  db.prepare('UPDATE youtube_videos SET title=?, session_id=? WHERE id=?').run(
+  await db.pool.execute('UPDATE youtube_videos SET title=?, session_id=? WHERE id=?', [
     b.title !== undefined ? b.title : existing.title,
     b.sessionId !== undefined ? b.sessionId : existing.session_id,
     req.params.id
-  );
-  res.json(db.prepare('SELECT * FROM youtube_videos WHERE id = ?').get(req.params.id));
+  ]);
+  var [updated] = await db.pool.execute('SELECT * FROM youtube_videos WHERE id = ?', [req.params.id]);
+  res.json(updated[0]);
 });
 
 // DELETE
-router.delete('/:id', requireAdmin, function(req, res) {
-  db.prepare('DELETE FROM youtube_videos WHERE id = ?').run(req.params.id);
+router.delete('/:id', requireAdmin, async function(req, res) {
+  await db.pool.execute('DELETE FROM youtube_videos WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });
 

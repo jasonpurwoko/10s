@@ -47,6 +47,12 @@ app.use('/api/videos', require('./routes/videos'));
 app.use('/api/youtube', require('./routes/youtube'));
 app.use('/api/clips', require('./routes/clips'));
 
-app.listen(PORT, function() {
-  console.log('10s server running on http://localhost:' + PORT);
+var db = require('./db');
+db.init().then(function() {
+  app.listen(PORT, function() {
+    console.log('10s server running on http://localhost:' + PORT);
+  });
+}).catch(function(err) {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });

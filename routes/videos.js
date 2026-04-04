@@ -20,7 +20,7 @@ var storage = multer.diskStorage({
 
 var upload = multer({
   storage: storage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+  limits: { fileSize: 500 * 1024 * 1024 },
   fileFilter: function(req, file, cb) {
     if (file.mimetype.startsWith('video/')) cb(null, true);
     else cb(new Error('Only video files allowed'));
@@ -28,61 +28,61 @@ var upload = multer({
 });
 
 // GET videos (optionally filtered by sessionId)
-router.get('/', function(req, res) {
+router.get('/', async function(req, res) {
   if (req.query.sessionId) {
-    res.json(db.prepare('SELECT * FROM videos WHERE session_id = ? ORDER BY created_at DESC').all(req.query.sessionId));
+    var [rows] = await db.pool.execute('SELECT * FROM videos WHERE session_id = ? ORDER BY created_at DESC', [req.query.sessionId]);
+    res.json(rows);
   } else {
-    res.json(db.prepare('SELECT * FROM videos ORDER BY created_at DESC').all());
+    var [rows] = await db.pool.execute('SELECT * FROM videos ORDER BY created_at DESC');
+    res.json(rows);
   }
 });
 
 // POST upload videos
-router.post('/', requireAdmin, upload.array('videos', 20), function(req, res) {
+router.post('/', requireAdmin, upload.array('videos', 20), async function(req, res) {
   var sessionId = req.body.sessionId;
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
 
-  var insert = db.prepare(
-    'INSERT INTO videos (id, session_id, name, size, mime_type, filename) VALUES (?, ?, ?, ?, ?, ?)'
-  );
-
   var results = [];
-  var tx = db.transaction(function(files) {
-    files.forEach(function(file) {
-      var id = genId();
-      insert.run(id, sessionId, file.originalname, file.size, file.mimetype, file.filename);
-      results.push({
-        id: id,
-        session_id: sessionId,
-        name: file.originalname,
-        size: file.size,
-        mime_type: file.mimetype,
-        filename: file.filename
-      });
+  for (var i = 0; i < req.files.length; i++) {
+    var file = req.files[i];
+    var id = genId();
+    await db.pool.execute(
+      'INSERT INTO videos (id, session_id, name, size, mime_type, filename) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, sessionId, file.originalname, file.size, file.mimetype, file.filename]
+    );
+    results.push({
+      id: id,
+      session_id: sessionId,
+      name: file.originalname,
+      size: file.size,
+      mime_type: file.mimetype,
+      filename: file.filename
     });
-  });
-  tx(req.files);
+  }
 
   // Update video count
-  var count = db.prepare('SELECT COUNT(*) as c FROM videos WHERE session_id = ?').get(sessionId).c;
-  db.prepare('UPDATE sessions SET video_count = ? WHERE id = ?').run(count, sessionId);
+  var [countRows] = await db.pool.execute('SELECT COUNT(*) as c FROM videos WHERE session_id = ?', [sessionId]);
+  await db.pool.execute('UPDATE sessions SET video_count = ? WHERE id = ?', [countRows[0].c, sessionId]);
 
   res.json(results);
 });
 
 // DELETE one video
-router.delete('/:id', requireAdmin, function(req, res) {
-  var video = db.prepare('SELECT * FROM videos WHERE id = ?').get(req.params.id);
-  if (!video) return res.status(404).json({ error: 'Not found' });
+router.delete('/:id', requireAdmin, async function(req, res) {
+  var [rows] = await db.pool.execute('SELECT * FROM videos WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  var video = rows[0];
 
   // Remove file
   var fp = path.join(__dirname, '..', 'uploads', video.filename);
   try { fs.unlinkSync(fp); } catch(e) {}
 
-  db.prepare('DELETE FROM videos WHERE id = ?').run(req.params.id);
+  await db.pool.execute('DELETE FROM videos WHERE id = ?', [req.params.id]);
 
   // Update video count
-  var count = db.prepare('SELECT COUNT(*) as c FROM videos WHERE session_id = ?').get(video.session_id).c;
-  db.prepare('UPDATE sessions SET video_count = ? WHERE id = ?').run(count, video.session_id);
+  var [countRows] = await db.pool.execute('SELECT COUNT(*) as c FROM videos WHERE session_id = ?', [video.session_id]);
+  await db.pool.execute('UPDATE sessions SET video_count = ? WHERE id = ?', [countRows[0].c, video.session_id]);
 
   res.json({ ok: true });
 });
