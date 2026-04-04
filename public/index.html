@@ -140,14 +140,14 @@
 
     /* Recent Sessions */
     .session-row {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; gap: 10px;
       padding: 9px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s;
     }
     .session-row:last-of-type { border-bottom: none; }
     .session-row:hover { opacity: 0.7; }
-    .session-row .name { font-size: 13px; font-weight: 500; }
-    .session-row .date { font-size: 12px; color: var(--text-muted); width: 60px; text-align: center; }
-    .session-row .dur { font-size: 12px; color: var(--text-muted); text-align: right; width: 55px; }
+    .session-row .name { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .session-row .date { font-size: 12px; color: var(--text-muted); width: 70px; text-align: right; flex-shrink: 0; }
+    .session-row .dur { font-size: 12px; color: var(--text-muted); text-align: right; width: 55px; flex-shrink: 0; }
     .session-row .vid-badge {
       font-size: 10px; background: var(--purple); color: #fff; padding: 2px 6px;
       border-radius: 3px; margin-left: 6px; font-weight: 600;
