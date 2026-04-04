@@ -492,7 +492,7 @@
     .yt-card iframe, .yt-card img {
       width: 100%; aspect-ratio: 16/9; border: none; display: block; object-fit: cover;
     }
-    .yt-card { cursor: pointer; }
+    .yt-card { cursor: default; }
     .yt-card .yt-card-info {
       padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;
     }
@@ -1099,8 +1099,8 @@
             return;
           }
           ytGrid.innerHTML = ytVideos.map(function(v) {
-            return '<div class="yt-card" onclick="window.open(\'' + escapeHTML(v.url) + '\', \'_blank\')">' +
-              '<img src="https://img.youtube.com/vi/' + escapeHTML(v.youtube_id) + '/mqdefault.jpg" alt="">' +
+            return '<div class="yt-card">' +
+              '<iframe src="https://www.youtube.com/embed/' + escapeHTML(v.youtube_id) + '" frameborder="0" allowfullscreen></iframe>' +
               '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || 'Untitled') + '</div></div></div>';
           }).join('');
         });
