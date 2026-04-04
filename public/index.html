@@ -434,6 +434,11 @@
       font-size: 16px; padding: 4px; line-height: 1; opacity: 0.7;
     }
     .yt-preview-item .remove-btn:hover { opacity: 1; }
+    .reorder-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 4px; cursor: pointer; font-size: 9px; padding: 2px 5px; font-family: inherit;
+    }
+    .reorder-btn:hover { background: var(--border); color: var(--text); }
 
     .clips-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .clips-header h1 { margin-bottom: 0; }
@@ -1280,17 +1285,41 @@
     function renderYtPreviews() {
       var container = document.getElementById('yt-previews');
       if (!pendingYouTubeVideos.length) { container.innerHTML = ''; return; }
+      var len = pendingYouTubeVideos.length;
       container.innerHTML = pendingYouTubeVideos.map(function(v, i) {
-        var savedLabel = v.existing ? '<span style="font-size:10px;color:var(--accent);margin-right:6px">Saved</span>' : '';
+        var savedLabel = v.existing ? '<span style="font-size:10px;color:var(--accent);margin-right:4px">Saved</span>' : '';
+        var upBtn = i > 0 ? '<button type="button" class="reorder-btn" data-yt-up="' + i + '" title="Move up">&#9650;</button>' : '<span class="reorder-btn" style="visibility:hidden">&#9650;</span>';
+        var downBtn = i < len - 1 ? '<button type="button" class="reorder-btn" data-yt-down="' + i + '" title="Move down">&#9660;</button>' : '<span class="reorder-btn" style="visibility:hidden">&#9660;</span>';
         return '<div class="yt-preview-item">' +
+          '<div style="display:flex;flex-direction:column;gap:2px">' + upBtn + downBtn + '</div>' +
           '<img src="https://img.youtube.com/vi/' + v.youtubeId + '/default.jpg" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:4px">' +
           savedLabel +
-          '<input type="text" placeholder="Video title (optional)" value="' + escapeHTML(v.title) + '" data-yt-idx="' + i + '" style="flex:1"' + (v.existing ? ' disabled' : '') + '>' +
+          '<input type="text" placeholder="Video title" value="' + escapeHTML(v.title) + '" data-yt-idx="' + i + '" style="flex:1">' +
           '<button type="button" class="remove-btn" data-yt-rm="' + i + '">&times;</button></div>';
       }).join('');
       container.querySelectorAll('[data-yt-idx]').forEach(function(inp) {
         inp.addEventListener('input', function() {
-          pendingYouTubeVideos[parseInt(inp.dataset.ytIdx)].title = inp.value;
+          var item = pendingYouTubeVideos[parseInt(inp.dataset.ytIdx)];
+          item.title = inp.value;
+          if (item.existing) item.titleChanged = true;
+        });
+      });
+      container.querySelectorAll('[data-yt-up]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var idx = parseInt(btn.dataset.ytUp);
+          var temp = pendingYouTubeVideos[idx - 1];
+          pendingYouTubeVideos[idx - 1] = pendingYouTubeVideos[idx];
+          pendingYouTubeVideos[idx] = temp;
+          renderYtPreviews();
+        });
+      });
+      container.querySelectorAll('[data-yt-down]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var idx = parseInt(btn.dataset.ytDown);
+          var temp = pendingYouTubeVideos[idx + 1];
+          pendingYouTubeVideos[idx + 1] = pendingYouTubeVideos[idx];
+          pendingYouTubeVideos[idx] = temp;
+          renderYtPreviews();
         });
       });
       container.querySelectorAll('[data-yt-rm]').forEach(function(btn) {
@@ -1312,10 +1341,13 @@
       removedYouTubeIds.forEach(function(id) {
         promises.push(api.del('/api/youtube/' + id));
       });
-      // Only POST new ones (not existing)
-      pendingYouTubeVideos.forEach(function(v) {
-        if (!v.existing) {
-          promises.push(api.post('/api/youtube', { url: v.url, title: v.title, sessionId: sessionId }));
+      pendingYouTubeVideos.forEach(function(v, i) {
+        if (v.existing) {
+          // Update title and sort order for existing videos
+          promises.push(api.put('/api/youtube/' + v.id, { title: v.title, sortOrder: i }));
+        } else {
+          // Create new ones with sort order
+          promises.push(api.post('/api/youtube', { url: v.url, title: v.title, sessionId: sessionId, sortOrder: i }));
         }
       });
       if (!promises.length) return Promise.resolve();

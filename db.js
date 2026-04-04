@@ -20,7 +20,7 @@ async function init() {
 
   await pool.execute("CREATE TABLE IF NOT EXISTS goals (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    text TEXT NOT NULL,\n    type VARCHAR(50) NOT NULL,\n    status VARCHAR(50) DEFAULT 'not started',\n    metric VARCHAR(100) DEFAULT '',\n    target INT DEFAULT 0\n  )");
 
-  await pool.execute("CREATE TABLE IF NOT EXISTS youtube_videos (\n    id VARCHAR(20) PRIMARY KEY,\n    url TEXT NOT NULL,\n    youtube_id VARCHAR(20) NOT NULL,\n    title VARCHAR(255) DEFAULT '',\n    session_id VARCHAR(20),\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL\n  )");
+  await pool.execute("CREATE TABLE IF NOT EXISTS youtube_videos (\n    id VARCHAR(20) PRIMARY KEY,\n    url TEXT NOT NULL,\n    youtube_id VARCHAR(20) NOT NULL,\n    title VARCHAR(255) DEFAULT '',\n    session_id VARCHAR(20),\n    sort_order INT DEFAULT 0,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL\n  )");
 
   await pool.execute("CREATE TABLE IF NOT EXISTS clips (\n    id VARCHAR(20) PRIMARY KEY,\n    youtube_video_id VARCHAR(20) NOT NULL,\n    title VARCHAR(255) NOT NULL,\n    start_time INT NOT NULL,\n    end_time INT NOT NULL,\n    notes TEXT,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (youtube_video_id) REFERENCES youtube_videos(id) ON DELETE CASCADE\n  )");
 

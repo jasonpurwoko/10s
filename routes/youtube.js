@@ -15,10 +15,10 @@ function parseYouTubeId(url) {
 // GET all youtube videos (optionally by sessionId)
 router.get('/', async function(req, res) {
   if (req.query.sessionId) {
-    var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE session_id = ? ORDER BY created_at DESC', [req.query.sessionId]);
+    var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE session_id = ? ORDER BY sort_order ASC, created_at ASC', [req.query.sessionId]);
     res.json(rows);
   } else {
-    var [rows] = await db.pool.execute('SELECT * FROM youtube_videos ORDER BY created_at DESC');
+    var [rows] = await db.pool.execute('SELECT * FROM youtube_videos ORDER BY sort_order ASC, created_at ASC');
     res.json(rows);
   }
 });
@@ -38,8 +38,8 @@ router.post('/', requireAdmin, async function(req, res) {
 
   var id = genId();
   await db.pool.execute(
-    'INSERT INTO youtube_videos (id, url, youtube_id, title, session_id) VALUES (?, ?, ?, ?, ?)',
-    [id, b.url, ytId, b.title || '', b.sessionId || null]
+    'INSERT INTO youtube_videos (id, url, youtube_id, title, session_id, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, b.url, ytId, b.title || '', b.sessionId || null, b.sortOrder || 0]
   );
   var [rows] = await db.pool.execute('SELECT * FROM youtube_videos WHERE id = ?', [id]);
   res.json(rows[0]);
@@ -51,9 +51,10 @@ router.put('/:id', requireAdmin, async function(req, res) {
   if (!rows.length) return res.status(404).json({ error: 'Not found' });
   var existing = rows[0];
   var b = req.body;
-  await db.pool.execute('UPDATE youtube_videos SET title=?, session_id=? WHERE id=?', [
+  await db.pool.execute('UPDATE youtube_videos SET title=?, session_id=?, sort_order=? WHERE id=?', [
     b.title !== undefined ? b.title : existing.title,
     b.sessionId !== undefined ? b.sessionId : existing.session_id,
+    b.sortOrder !== undefined ? b.sortOrder : existing.sort_order,
     req.params.id
   ]);
   var [updated] = await db.pool.execute('SELECT * FROM youtube_videos WHERE id = ?', [req.params.id]);
