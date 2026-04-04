@@ -1087,6 +1087,7 @@
     // ===================== LOG FORM =====================
     function setupLogForm() {
       pendingYouTubeVideos = [];
+      removedYouTubeIds = [];
       renderYtPreviews();
 
       if (editingId) {
@@ -1100,6 +1101,13 @@
           document.getElementById('f-score').value = s.score || '';
           document.getElementById('f-notes').value = s.notes || '';
           document.getElementById('cancel-edit').style.display = 'inline-block';
+          // Load existing YouTube videos for this session
+          api.get('/api/youtube?sessionId=' + editingId).then(function(ytVideos) {
+            ytVideos.forEach(function(v) {
+              pendingYouTubeVideos.push({ id: v.id, url: v.url, youtubeId: v.youtube_id, title: v.title || '', existing: true });
+            });
+            renderYtPreviews();
+          });
         });
         return;
       }
@@ -1267,13 +1275,17 @@
       renderYtPreviews();
     });
 
+    var removedYouTubeIds = [];
+
     function renderYtPreviews() {
       var container = document.getElementById('yt-previews');
       if (!pendingYouTubeVideos.length) { container.innerHTML = ''; return; }
       container.innerHTML = pendingYouTubeVideos.map(function(v, i) {
+        var savedLabel = v.existing ? '<span style="font-size:10px;color:var(--accent);margin-right:6px">Saved</span>' : '';
         return '<div class="yt-preview-item">' +
           '<img src="https://img.youtube.com/vi/' + v.youtubeId + '/default.jpg" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:4px">' +
-          '<input type="text" placeholder="Video title (optional)" value="' + escapeHTML(v.title) + '" data-yt-idx="' + i + '" style="flex:1">' +
+          savedLabel +
+          '<input type="text" placeholder="Video title (optional)" value="' + escapeHTML(v.title) + '" data-yt-idx="' + i + '" style="flex:1"' + (v.existing ? ' disabled' : '') + '>' +
           '<button type="button" class="remove-btn" data-yt-rm="' + i + '">&times;</button></div>';
       }).join('');
       container.querySelectorAll('[data-yt-idx]').forEach(function(inp) {
@@ -1283,17 +1295,30 @@
       });
       container.querySelectorAll('[data-yt-rm]').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          pendingYouTubeVideos.splice(parseInt(btn.dataset.ytRm), 1);
+          var idx = parseInt(btn.dataset.ytRm);
+          var removed = pendingYouTubeVideos[idx];
+          if (removed.existing && removed.id) {
+            removedYouTubeIds.push(removed.id);
+          }
+          pendingYouTubeVideos.splice(idx, 1);
           renderYtPreviews();
         });
       });
     }
 
     function saveYouTubeVideos(sessionId) {
-      if (!pendingYouTubeVideos.length) return Promise.resolve();
-      var promises = pendingYouTubeVideos.map(function(v) {
-        return api.post('/api/youtube', { url: v.url, title: v.title, sessionId: sessionId });
+      var promises = [];
+      // Delete removed existing videos
+      removedYouTubeIds.forEach(function(id) {
+        promises.push(api.del('/api/youtube/' + id));
       });
+      // Only POST new ones (not existing)
+      pendingYouTubeVideos.forEach(function(v) {
+        if (!v.existing) {
+          promises.push(api.post('/api/youtube', { url: v.url, title: v.title, sessionId: sessionId }));
+        }
+      });
+      if (!promises.length) return Promise.resolve();
       return Promise.all(promises);
     }
 
