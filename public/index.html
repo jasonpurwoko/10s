@@ -589,27 +589,9 @@
               <label>Duration (minutes)</label>
               <input type="number" id="f-duration" placeholder="60" min="1">
             </div>
-            <div class="form-group">
-              <label>Intensity</label>
-              <select id="f-intensity">
-                <option value="low">Low</option>
-                <option value="medium" selected>Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
             <div class="form-group full">
               <label>Focus Areas</label>
               <input type="text" id="f-focus" placeholder="e.g. Serve, Backhand, Net play (comma separated)">
-            </div>
-            <div class="form-group full">
-              <label>How did it feel? (1-5)</label>
-              <div class="rating-input" id="f-rating">
-                <button type="button" class="star" data-val="1">&#9733;</button>
-                <button type="button" class="star" data-val="2">&#9733;</button>
-                <button type="button" class="star" data-val="3">&#9733;</button>
-                <button type="button" class="star" data-val="4">&#9733;</button>
-                <button type="button" class="star" data-val="5">&#9733;</button>
-              </div>
             </div>
             <div class="form-group full">
               <label>Match Score (if applicable)</label>
@@ -1059,10 +1041,6 @@
         var dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         var typeLabel = s.type.charAt(0).toUpperCase() + s.type.slice(1);
 
-        var stars = '';
-        for (var i = 0; i < 5; i++) {
-          stars += '<span class="star ' + (i < (s.rating || 0) ? 'filled' : '') + '">&#9733;</span>';
-        }
 
         var focusTags = s.focus
           ? s.focus.split(',').map(function(f) { return '<span class="skill-tag">' + f.trim() + '</span>'; }).join('')
@@ -1072,9 +1050,7 @@
           '<div class="detail-meta">' + dateStr + '</div></div>' +
           '<span class="tag tag-' + s.type + '">' + typeLabel + '</span></div>' +
           '<div class="detail-grid">' +
-          '<div class="detail-field"><div class="label">Duration</div><div class="value">' + s.duration + ' minutes</div></div>' +
-          '<div class="detail-field"><div class="label">Intensity</div><div class="value">' + ((s.intensity || 'medium').charAt(0).toUpperCase() + (s.intensity || 'medium').slice(1)) + '</div></div>' +
-          '<div class="detail-field"><div class="label">Feeling</div><div class="rating">' + stars + '</div></div></div>';
+          '<div class="detail-field"><div class="label">Duration</div><div class="value">' + s.duration + ' minutes</div></div></div>';
 
         if (s.score) {
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Match Score</div><div class="value" style="font-size:18px">' + escapeHTML(s.score) + '</div></div></div>';
@@ -1194,21 +1170,7 @@
     }
 
     // ===================== LOG FORM + VIDEO UPLOAD =====================
-    var selectedRating = 0;
     var pendingFiles = [];
-
-    document.querySelectorAll('#f-rating .star').forEach(function(star) {
-      star.addEventListener('click', function() {
-        selectedRating = parseInt(star.dataset.val);
-        updateStars();
-      });
-    });
-
-    function updateStars() {
-      document.querySelectorAll('#f-rating .star').forEach(function(s) {
-        s.classList.toggle('filled', parseInt(s.dataset.val) <= selectedRating);
-      });
-    }
 
     var uploadZone = document.getElementById('upload-zone');
     var fileInput = document.getElementById('f-videos');
@@ -1266,12 +1228,9 @@
           document.getElementById('f-date').value = s.date;
           document.getElementById('f-type').value = s.type;
           document.getElementById('f-duration').value = s.duration;
-          document.getElementById('f-intensity').value = s.intensity || 'medium';
           document.getElementById('f-focus').value = s.focus || '';
           document.getElementById('f-score').value = s.score || '';
           document.getElementById('f-notes').value = s.notes || '';
-          selectedRating = s.rating || 0;
-          updateStars();
           document.getElementById('cancel-edit').style.display = 'inline-block';
         });
         return;
@@ -1281,13 +1240,10 @@
       document.getElementById('f-date').value = fmt(new Date());
       document.getElementById('f-type').value = 'rally';
       document.getElementById('f-duration').value = '';
-      document.getElementById('f-intensity').value = 'medium';
       document.getElementById('f-focus').value = '';
       document.getElementById('f-score').value = '';
       document.getElementById('f-notes').value = '';
       document.getElementById('f-youtube-url').value = '';
-      selectedRating = 0;
-      updateStars();
       document.getElementById('cancel-edit').style.display = 'none';
     }
 
@@ -1309,7 +1265,7 @@
         date: date,
         type: document.getElementById('f-type').value,
         duration: parseInt(duration),
-        intensity: document.getElementById('f-intensity').value,
+        intensity: 'medium',
         focus: document.getElementById('f-focus').value,
         rating: selectedRating,
         score: document.getElementById('f-score').value,
