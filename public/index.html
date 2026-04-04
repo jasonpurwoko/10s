@@ -1267,7 +1267,7 @@
         duration: parseInt(duration),
         intensity: 'medium',
         focus: document.getElementById('f-focus').value,
-        rating: selectedRating,
+        rating: 0,
         score: document.getElementById('f-score').value,
         notes: document.getElementById('f-notes').value
       };
@@ -1276,8 +1276,17 @@
       saveBtn.textContent = 'Saving...';
       saveBtn.disabled = true;
 
+      function handleSaveError(err) {
+        saveBtn.textContent = 'Save Session';
+        saveBtn.disabled = false;
+        var msg = (err && err.error) ? err.error : 'Failed to save. Make sure you are logged in as admin.';
+        errEl.textContent = msg;
+        errEl.style.display = 'inline';
+      }
+
       if (editingId) {
-        api.put('/api/sessions/' + editingId, data).then(function() {
+        api.put('/api/sessions/' + editingId, data).then(function(result) {
+          if (result.error) throw result;
           return uploadVideos(editingId);
         }).then(function() {
           return saveYouTubeVideos(editingId);
@@ -1286,9 +1295,10 @@
           saveBtn.disabled = false;
           editingId = null;
           navigate('sessions');
-        });
+        }).catch(handleSaveError);
       } else {
         api.post('/api/sessions', data).then(function(session) {
+          if (session.error) throw session;
           return uploadVideos(session.id).then(function() {
             return saveYouTubeVideos(session.id);
           }).then(function() { return session; });
@@ -1296,7 +1306,7 @@
           saveBtn.textContent = 'Save Session';
           saveBtn.disabled = false;
           navigate('dashboard');
-        });
+        }).catch(handleSaveError);
       }
     });
 
