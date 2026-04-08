@@ -714,18 +714,53 @@
       btn.addEventListener('click', function() { navigate(btn.dataset.page); });
     });
 
-    window.navigate = function(page) {
+    window.navigate = function(page, opts) {
       if (page === 'log' && !isAdmin) { navigate('dashboard'); return; }
       currentPage = page;
       document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
       document.getElementById('page-' + page).classList.add('active');
       navBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.page === page); });
+
+      // Update URL hash
+      var skipHash = opts && opts.skipHash;
+      if (!skipHash) {
+        if (page === 'detail' && currentDetailId) {
+          window.location.hash = '/session/' + currentDetailId;
+        } else if (page === 'clip-detail' && currentClipId) {
+          window.location.hash = '/clip/' + currentClipId;
+        } else {
+          window.location.hash = '/' + page;
+        }
+      }
+
       if (page === 'dashboard') renderDashboard();
       else if (page === 'sessions') renderAllSessions();
       else if (page === 'log') setupLogForm();
       else if (page === 'clips') renderClipsPage();
       else if (page === 'clip-detail') { /* rendered by showClipDetail */ }
     };
+
+    var currentDetailId = null;
+    var currentClipId = null;
+
+    function handleRoute() {
+      var hash = window.location.hash.replace('#', '') || '/dashboard';
+      var parts = hash.split('/').filter(function(p) { return p; });
+      var page = parts[0];
+      var id = parts[1];
+
+      if (page === 'session' && id) {
+        showDetail(id);
+      } else if (page === 'clip' && id) {
+        showClipDetail(id);
+      } else if (['dashboard', 'sessions', 'log', 'clips'].indexOf(page) !== -1) {
+        navigate(page, { skipHash: true });
+      } else {
+        navigate('dashboard', { skipHash: true });
+      }
+    }
+
+    window.addEventListener('hashchange', handleRoute);
 
     // ===================== HELPERS =====================
     function fmt(d) {
@@ -937,6 +972,7 @@
 
     // ===================== SESSION DETAIL =====================
     function showDetail(id) {
+      currentDetailId = id;
       api.get('/api/sessions/' + id).then(function(s) {
         if (!s || s.error) return;
 
@@ -1308,6 +1344,7 @@
 
     // ===================== CLIP DETAIL =====================
     function showClipDetail(clipId) {
+      currentClipId = clipId;
       api.get('/api/clips/' + clipId).then(function(clip) {
         if (!clip || clip.error) return;
 
@@ -1441,7 +1478,7 @@
     document.getElementById('clip-detail-back').addEventListener('click', function() { navigate('clips'); });
 
     // ===================== INIT =====================
-    checkAuth().then(function() { renderDashboard(); });
+    checkAuth().then(function() { handleRoute(); });
   </script>
 </body>
 </html>
