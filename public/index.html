@@ -1019,7 +1019,6 @@
           document.getElementById('f-date').value = s.date;
           document.getElementById('f-type').value = s.type;
           document.getElementById('f-duration').value = s.duration;
-          document.getElementById('f-focus').value = s.focus || '';
           document.getElementById('f-score').value = s.score || '';
           document.getElementById('f-notes').value = s.notes || '';
           document.getElementById('cancel-edit').style.display = 'inline-block';
@@ -1038,7 +1037,6 @@
       document.getElementById('f-date').value = fmt(new Date());
       document.getElementById('f-type').value = 'rally';
       document.getElementById('f-duration').value = '';
-      document.getElementById('f-focus').value = '';
       document.getElementById('f-score').value = '';
       document.getElementById('f-notes').value = '';
       document.getElementById('f-youtube-url').value = '';
@@ -1064,7 +1062,7 @@
         type: document.getElementById('f-type').value,
         duration: parseInt(duration),
         intensity: 'medium',
-        focus: document.getElementById('f-focus').value,
+        focus: '',
         rating: 0,
         score: document.getElementById('f-score').value,
         notes: document.getElementById('f-notes').value
