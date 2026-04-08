@@ -982,7 +982,8 @@
           ytGrid.innerHTML = ytVideos.map(function(v) {
             return '<div class="yt-card">' +
               '<iframe src="https://www.youtube.com/embed/' + escapeHTML(v.youtube_id) + '" frameborder="0" allowfullscreen></iframe>' +
-              '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || 'Untitled') + '</div></div></div>';
+              '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || 'Untitled') + '</div>' +
+              '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;margin-top:6px" onclick="showNewClipModalFor(\'' + v.id + '\',\'' + escapeHTML(v.title || v.youtube_id) + '\')">+ Create Clip</button></div></div>';
           }).join('');
         });
       });
@@ -1236,19 +1237,27 @@
 
     document.getElementById('new-clip-btn').addEventListener('click', function() { showNewClipModal(); });
 
-    function showNewClipModal() {
+    window.showNewClipModalFor = function(videoId, videoTitle) {
+      showNewClipModal(videoId);
+    };
+
+    function showNewClipModal(preselectedVideoId) {
       api.get('/api/youtube').then(function(ytVideos) {
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         var videoOptions = ytVideos.map(function(v) {
-          return '<option value="' + v.id + '">' + escapeHTML(v.title || v.youtube_id) + '</option>';
+          var selected = v.id === preselectedVideoId ? ' selected' : '';
+          return '<option value="' + v.id + '"' + selected + '>' + escapeHTML(v.title || v.youtube_id) + '</option>';
         }).join('');
         if (!ytVideos.length) {
           videoOptions = '<option value="">No YouTube videos available</option>';
         }
+        var selectDisabled = preselectedVideoId ? ' disabled' : '';
+        var hiddenInput = preselectedVideoId ? '<input type="hidden" id="clip-yt-hidden" value="' + preselectedVideoId + '">' : '';
         overlay.innerHTML = '<div class="modal" style="max-width:460px">' +
           '<h3>Create Clip</h3>' +
-          '<div class="form-group" style="margin-bottom:12px"><label>YouTube Video</label><select id="clip-yt-select" style="width:100%">' + videoOptions + '</select></div>' +
+          hiddenInput +
+          '<div class="form-group" style="margin-bottom:12px"><label>YouTube Video</label><select id="clip-yt-select" style="width:100%"' + selectDisabled + '>' + videoOptions + '</select></div>' +
           '<div class="form-group" style="margin-bottom:12px"><label>Clip Title</label><input type="text" id="clip-title" placeholder="e.g. Backhand winner"></div>' +
           '<div style="display:flex;gap:10px;margin-bottom:12px">' +
           '<div class="form-group" style="flex:1"><label>Start Time (mm:ss)</label><input type="text" id="clip-start" placeholder="0:00" value="0:00"></div>' +
@@ -1261,7 +1270,8 @@
         overlay.querySelector('#clip-cancel').onclick = function() { overlay.remove(); };
         overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
         overlay.querySelector('#clip-save').onclick = function() {
-          var ytVideoId = overlay.querySelector('#clip-yt-select').value;
+          var hiddenEl = overlay.querySelector('#clip-yt-hidden');
+          var ytVideoId = hiddenEl ? hiddenEl.value : overlay.querySelector('#clip-yt-select').value;
           var title = overlay.querySelector('#clip-title').value.trim();
           var startTime = parseTimeInput(overlay.querySelector('#clip-start').value);
           var endTime = parseTimeInput(overlay.querySelector('#clip-end').value);
