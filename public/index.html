@@ -501,6 +501,7 @@
       .detail-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
+  <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
   <div class="app">
@@ -1306,13 +1307,13 @@
         var secs = duration % 60;
         var durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
 
-        var timeStr = formatTime(clip.start_time) + ' - ' + formatTime(clip.end_time);
-
-        var embedUrl = 'https://www.youtube.com/embed/' + clip.youtube_id + '?start=' + clip.start_time + '&end=' + clip.end_time + '&autoplay=0';
+        var ytUrl = 'https://www.youtube.com/watch?v=' + clip.youtube_id;
+        var startLink = '<a href="' + ytUrl + '&t=' + clip.start_time + '" target="_blank" style="color:var(--accent);text-decoration:none">' + formatTime(clip.start_time) + '</a>';
+        var endLink = '<a href="' + ytUrl + '&t=' + clip.end_time + '" target="_blank" style="color:var(--accent);text-decoration:none">' + formatTime(clip.end_time) + '</a>';
 
         var html = '<h1>' + escapeHTML(clip.title) + '</h1>' +
-          '<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">' + escapeHTML(clip.video_title || 'Untitled video') + ' &middot; ' + timeStr + ' (' + durStr + ')</div>' +
-          '<div class="clip-detail-player"><iframe src="' + embedUrl + '" frameborder="0" allowfullscreen></iframe></div>';
+          '<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">' + escapeHTML(clip.video_title || 'Untitled video') + ' &middot; ' + startLink + ' - ' + endLink + ' (' + durStr + ')</div>' +
+          '<div class="clip-detail-player"><div id="clip-yt-player"></div></div>';
 
         if (clip.notes) {
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(clip.notes) + '</div></div></div>';
@@ -1334,6 +1335,24 @@
 
         document.getElementById('clip-detail-content').innerHTML = html;
         navigate('clip-detail');
+
+        // Initialize YouTube IFrame Player API for clip looping
+        if (window.clipPlayer) { try { window.clipPlayer.destroy(); } catch(e) {} }
+        window.clipPlayer = new YT.Player('clip-yt-player', {
+          videoId: clip.youtube_id,
+          playerVars: { start: clip.start_time, end: clip.end_time, autoplay: 0, rel: 0 },
+          events: {
+            onStateChange: function(event) {
+              if (event.data === YT.PlayerState.ENDED || event.data === YT.PlayerState.PAUSED) {
+                var currentTime = window.clipPlayer.getCurrentTime();
+                if (currentTime >= clip.end_time - 1) {
+                  window.clipPlayer.seekTo(clip.start_time, true);
+                  window.clipPlayer.pauseVideo();
+                }
+              }
+            }
+          }
+        });
 
         loadClipComments(clipId);
 
