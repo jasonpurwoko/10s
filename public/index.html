@@ -738,6 +738,10 @@
             err.textContent = data.error || 'Wrong password';
             err.style.display = 'block';
           }
+        }).catch(function(e) {
+          var err = overlay.querySelector('#admin-error');
+          err.textContent = 'Login failed: ' + e.message;
+          err.style.display = 'block';
         });
       };
       overlay.querySelector('#admin-pw').addEventListener('keydown', function(e) {
@@ -942,9 +946,6 @@
         var typeLabel = s.type.charAt(0).toUpperCase() + s.type.slice(1);
 
 
-        var focusTags = s.focus
-          ? s.focus.split(',').map(function(f) { return '<span class="skill-tag">' + f.trim() + '</span>'; }).join('')
-          : '<span style="color:var(--text-muted)">None specified</span>';
 
         var html = '<div class="detail-header"><div><h1>' + typeLabel + ' Session</h1>' +
           '<div class="detail-meta">' + dateStr + '</div></div>' +
@@ -956,7 +957,6 @@
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Match Score</div><div class="value" style="font-size:18px">' + escapeHTML(s.score) + '</div></div></div>';
         }
 
-        html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Focus Areas</div><div class="skill-tags">' + focusTags + '</div></div></div>';
 
         if (s.notes) {
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(s.notes) + '</div></div></div>';
