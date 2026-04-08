@@ -53,6 +53,9 @@ db.init().then(function() {
     console.log('10s server running on http://localhost:' + PORT);
   });
 }).catch(function(err) {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
+  console.error('Warning: Failed to initialize database:', err.message || err);
+  console.log('Starting server without database connection...');
+  app.listen(PORT, function() {
+    console.log('10s server running on http://localhost:' + PORT + ' (no database)');
+  });
 });
