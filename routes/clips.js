@@ -31,8 +31,8 @@ router.get('/:id', async function(req, res) {
   res.json(rows[0]);
 });
 
-// POST create clip
-router.post('/', requireAdmin, async function(req, res) {
+// POST create clip (public)
+router.post('/', async function(req, res) {
   var b = req.body;
   if (!b.youtubeVideoId || b.startTime === undefined || b.endTime === undefined || !b.title) {
     return res.status(400).json({ error: 'Missing required fields' });
