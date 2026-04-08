@@ -751,6 +751,25 @@
 
     function vidCount(s) { return s.video_count || s.videoCount || 0; }
 
+    function parseTimeInput(val) {
+      val = val.trim();
+      if (val.indexOf(':') !== -1) {
+        var parts = val.split(':');
+        var m = parseInt(parts[0]);
+        var s = parseInt(parts[1]);
+        if (isNaN(m) || isNaN(s) || s < 0 || s >= 60) return null;
+        return m * 60 + s;
+      }
+      var n = parseInt(val);
+      return isNaN(n) || n < 0 ? null : n;
+    }
+
+    function formatTime(totalSeconds) {
+      var m = Math.floor(totalSeconds / 60);
+      var s = totalSeconds % 60;
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
     // ===================== DASHBOARD =====================
     function renderDashboard() {
       api.get('/api/sessions').then(function(sessions) {
@@ -1232,8 +1251,8 @@
           '<div class="form-group" style="margin-bottom:12px"><label>YouTube Video</label><select id="clip-yt-select" style="width:100%">' + videoOptions + '</select></div>' +
           '<div class="form-group" style="margin-bottom:12px"><label>Clip Title</label><input type="text" id="clip-title" placeholder="e.g. Backhand winner"></div>' +
           '<div style="display:flex;gap:10px;margin-bottom:12px">' +
-          '<div class="form-group" style="flex:1"><label>Start Time (seconds)</label><input type="number" id="clip-start" min="0" value="0"></div>' +
-          '<div class="form-group" style="flex:1"><label>End Time (seconds)</label><input type="number" id="clip-end" min="1" value="10"></div></div>' +
+          '<div class="form-group" style="flex:1"><label>Start Time (mm:ss)</label><input type="text" id="clip-start" placeholder="0:00" value="0:00"></div>' +
+          '<div class="form-group" style="flex:1"><label>End Time (mm:ss)</label><input type="text" id="clip-end" placeholder="0:10" value="0:10"></div></div>' +
           '<div class="form-group" style="margin-bottom:16px"><label>Notes (optional)</label><textarea id="clip-notes" placeholder="What to notice in this clip..."></textarea></div>' +
           '<span id="clip-form-error" style="color:var(--red);font-size:12px;display:none"></span>' +
           '<div class="btn-row"><button class="btn" id="clip-save">Create Clip</button>' +
@@ -1244,8 +1263,8 @@
         overlay.querySelector('#clip-save').onclick = function() {
           var ytVideoId = overlay.querySelector('#clip-yt-select').value;
           var title = overlay.querySelector('#clip-title').value.trim();
-          var startTime = parseInt(overlay.querySelector('#clip-start').value);
-          var endTime = parseInt(overlay.querySelector('#clip-end').value);
+          var startTime = parseTimeInput(overlay.querySelector('#clip-start').value);
+          var endTime = parseTimeInput(overlay.querySelector('#clip-end').value);
           var notes = overlay.querySelector('#clip-notes').value.trim();
           var errEl = overlay.querySelector('#clip-form-error');
           if (!ytVideoId || !title) {
@@ -1253,7 +1272,12 @@
             errEl.style.display = 'inline';
             return;
           }
-          if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) {
+          if (startTime === null || endTime === null) {
+            errEl.textContent = 'Use mm:ss format (e.g. 1:30) or just seconds (e.g. 90).';
+            errEl.style.display = 'inline';
+            return;
+          }
+          if (startTime >= endTime) {
             errEl.textContent = 'Start time must be less than end time.';
             errEl.style.display = 'inline';
             return;
@@ -1282,11 +1306,7 @@
         var secs = duration % 60;
         var durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
 
-        var startMins = Math.floor(clip.start_time / 60);
-        var startSecs = clip.start_time % 60;
-        var endMins = Math.floor(clip.end_time / 60);
-        var endSecs = clip.end_time % 60;
-        var timeStr = startMins + ':' + String(startSecs).padStart(2, '0') + ' - ' + endMins + ':' + String(endSecs).padStart(2, '0');
+        var timeStr = formatTime(clip.start_time) + ' - ' + formatTime(clip.end_time);
 
         var embedUrl = 'https://www.youtube.com/embed/' + clip.youtube_id + '?start=' + clip.start_time + '&end=' + clip.end_time + '&autoplay=0';
 
