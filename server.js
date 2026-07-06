@@ -44,7 +44,6 @@ app.get('/api/auth/status', function(req, res) {
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/goals', require('./routes/goals'));
 app.use('/api/videos', require('./routes/videos'));
-app.use('/api/youtube', require('./routes/youtube'));
 app.use('/api/clips', require('./routes/clips'));
 
 var db = require('./db');

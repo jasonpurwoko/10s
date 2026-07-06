@@ -386,7 +386,7 @@
     .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
     .modal .form-group { margin-bottom: 12px; }
 
-    /* YouTube / Clips */
+    /* Videos / Clips */
     .yt-import-row {
       display: flex; gap: 8px; margin-bottom: 8px;
     }
@@ -431,7 +431,7 @@
       overflow: hidden; cursor: pointer; transition: border-color 0.15s;
     }
     .clip-card:hover { border-color: var(--accent); }
-    .clip-card img {
+    .clip-card img, .clip-card video {
       width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #000;
     }
     .clip-card .clip-info { padding: 12px; }
@@ -439,7 +439,8 @@
     .clip-card .clip-meta { font-size: 11px; color: var(--text-muted); }
 
     .clip-detail-player { position: relative; width: 100%; margin-bottom: 16px; }
-    .clip-detail-player iframe {
+    .clip-detail-player iframe,
+    .clip-detail-player video {
       width: 100%; aspect-ratio: 16/9; border: none; border-radius: var(--radius); background: #000;
     }
 
@@ -474,8 +475,8 @@
       background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
       overflow: hidden; margin-bottom: 10px;
     }
-    .yt-card iframe, .yt-card img {
-      width: 100%; aspect-ratio: 16/9; border: none; display: block; object-fit: cover;
+    .yt-card iframe, .yt-card img, .yt-card video {
+      width: 100%; aspect-ratio: 16/9; border: none; display: block; object-fit: cover; background: #000;
     }
     .yt-card { cursor: default; }
     .yt-card .yt-card-info {
@@ -501,7 +502,6 @@
       .detail-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
-  <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
   <div class="app">
@@ -572,12 +572,15 @@
               <input type="text" id="f-score" placeholder="e.g. 6-4, 3-6, 7-5">
             </div>
             <div class="form-group full">
-              <label>YouTube Videos</label>
-              <div class="yt-import-row">
-                <input type="text" id="f-youtube-url" placeholder="Paste YouTube URL...">
-                <button type="button" id="add-yt-btn">Add</button>
+              <label>Videos</label>
+              <div class="upload-zone" id="upload-zone">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15V3m0 0L8 7m4-4l4 4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                <p>Drag &amp; drop videos here, or click to browse</p>
+                <p class="hint">MP4 (H.264) plays everywhere. Large .MOV / HEVC files may only play in Safari.</p>
+                <input type="file" id="f-videos" accept="video/*" multiple>
               </div>
-              <div class="yt-preview-list" id="yt-previews"></div>
+              <div id="upload-progress" style="display:none;margin-top:10px"></div>
+              <div class="upload-preview-list" id="video-previews"></div>
             </div>
             <div class="form-group full">
               <label>Notes</label>
@@ -742,7 +745,6 @@
 
     var currentDetailId = null;
     var currentClipId = null;
-
     function handleRoute() {
       var hash = window.location.hash.replace('#', '') || '/dashboard';
       var parts = hash.split('/').filter(function(p) { return p; });
@@ -997,7 +999,7 @@
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(s.notes) + '</div></div></div>';
         }
 
-        html += '<div class="yt-section card" id="detail-youtube"><div class="card-title">YouTube Videos</div><div id="detail-yt-grid"><div class="empty-state" style="padding:16px"><p>Loading...</p></div></div></div>';
+        html += '<div class="yt-section card" id="detail-videos"><div class="card-title">Videos</div><div id="detail-video-grid"><div class="empty-state" style="padding:16px"><p>Loading...</p></div></div></div>';
 
         if (isAdmin) {
           html += '<div class="btn-row" style="margin-top:14px">' +
@@ -1008,18 +1010,18 @@
         document.getElementById('detail-content').innerHTML = html;
         navigate('detail');
 
-        // Load YouTube videos
-        api.get('/api/youtube?sessionId=' + id).then(function(ytVideos) {
-          var ytGrid = document.getElementById('detail-yt-grid');
-          if (!ytVideos.length) {
-            ytGrid.innerHTML = '<div class="empty-state" style="padding:16px"><p>No YouTube videos linked</p></div>';
+        // Load uploaded videos
+        api.get('/api/videos?sessionId=' + id).then(function(videos) {
+          var grid = document.getElementById('detail-video-grid');
+          if (!videos.length) {
+            grid.innerHTML = '<div class="empty-state" style="padding:16px"><p>No videos uploaded</p></div>';
             return;
           }
-          ytGrid.innerHTML = ytVideos.map(function(v) {
+          grid.innerHTML = videos.map(function(v) {
             return '<div class="yt-card">' +
-              '<iframe src="https://www.youtube.com/embed/' + escapeHTML(v.youtube_id) + '" frameborder="0" allowfullscreen></iframe>' +
-              '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || 'Untitled') + '</div>' +
-              '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;margin-top:6px" onclick="showNewClipModalFor(\'' + v.id + '\',\'' + escapeHTML(v.title || v.youtube_id) + '\')">+ Create Clip</button></div></div>';
+              '<video src="' + escapeHTML(v.url) + '" controls preload="metadata" playsinline></video>' +
+              '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || v.name || 'Untitled') + '</div>' +
+              '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="showNewClipModalFor(\'' + v.id + '\')">+ Create Clip</button></div></div>';
           }).join('');
         });
       });
@@ -1048,9 +1050,13 @@
 
     // ===================== LOG FORM =====================
     function setupLogForm() {
-      pendingYouTubeVideos = [];
-      removedYouTubeIds = [];
-      renderYtPreviews();
+      pendingVideoFiles = [];
+      existingVideos = [];
+      removedVideoIds = [];
+      if (document.getElementById('f-videos')) document.getElementById('f-videos').value = '';
+      var progressEl = document.getElementById('upload-progress');
+      if (progressEl) progressEl.style.display = 'none';
+      renderVideoPreviews();
 
       if (editingId) {
         api.get('/api/sessions/' + editingId).then(function(s) {
@@ -1062,12 +1068,12 @@
           document.getElementById('f-score').value = s.score || '';
           document.getElementById('f-notes').value = s.notes || '';
           document.getElementById('cancel-edit').style.display = 'inline-block';
-          // Load existing YouTube videos for this session
-          api.get('/api/youtube?sessionId=' + editingId).then(function(ytVideos) {
-            ytVideos.forEach(function(v) {
-              pendingYouTubeVideos.push({ id: v.id, url: v.url, youtubeId: v.youtube_id, title: v.title || '', existing: true });
+          // Load existing videos for this session
+          api.get('/api/videos?sessionId=' + editingId).then(function(videos) {
+            existingVideos = videos.map(function(v) {
+              return { id: v.id, title: v.title || v.name || '', url: v.url, name: v.name };
             });
-            renderYtPreviews();
+            renderVideoPreviews();
           });
         });
         return;
@@ -1079,7 +1085,6 @@
       document.getElementById('f-duration').value = '';
       document.getElementById('f-score').value = '';
       document.getElementById('f-notes').value = '';
-      document.getElementById('f-youtube-url').value = '';
       document.getElementById('cancel-edit').style.display = 'none';
     }
 
@@ -1123,7 +1128,7 @@
       if (editingId) {
         api.put('/api/sessions/' + editingId, data).then(function(result) {
           if (result.error) throw result;
-          return saveYouTubeVideos(editingId);
+          return saveSessionVideos(editingId, saveBtn);
         }).then(function() {
           saveBtn.textContent = 'Save Session';
           saveBtn.disabled = false;
@@ -1133,7 +1138,7 @@
       } else {
         api.post('/api/sessions', data).then(function(session) {
           if (session.error) throw session;
-          return saveYouTubeVideos(session.id).then(function() { return session; });
+          return saveSessionVideos(session.id, saveBtn).then(function() { return session; });
         }).then(function() {
           saveBtn.textContent = 'Save Session';
           saveBtn.disabled = false;
@@ -1143,103 +1148,130 @@
     });
 
 
-    // ===================== YOUTUBE IMPORT IN LOG FORM =====================
-    var pendingYouTubeVideos = [];
+    // ===================== VIDEO UPLOAD IN LOG FORM =====================
+    var pendingVideoFiles = [];   // File objects queued for upload
+    var existingVideos = [];      // already-saved videos (when editing)
+    var removedVideoIds = [];     // saved videos the user removed
 
-    function parseYouTubeId(url) {
-      var match = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      return match ? match[1] : null;
-    }
-
-    document.getElementById('add-yt-btn').addEventListener('click', function() {
-      var input = document.getElementById('f-youtube-url');
-      var url = input.value.trim();
-      if (!url) return;
-      var ytId = parseYouTubeId(url);
-      if (!ytId) {
-        var errEl = document.getElementById('form-error');
-        errEl.textContent = 'Invalid YouTube URL';
-        errEl.style.display = 'inline';
-        setTimeout(function() { errEl.style.display = 'none'; }, 3000);
-        return;
-      }
-      pendingYouTubeVideos.push({ url: url, youtubeId: ytId, title: '' });
-      input.value = '';
-      renderYtPreviews();
-    });
-
-    var removedYouTubeIds = [];
-
-    function renderYtPreviews() {
-      var container = document.getElementById('yt-previews');
-      if (!pendingYouTubeVideos.length) { container.innerHTML = ''; return; }
-      var len = pendingYouTubeVideos.length;
-      container.innerHTML = pendingYouTubeVideos.map(function(v, i) {
-        var savedLabel = v.existing ? '<span style="font-size:10px;color:var(--accent);margin-right:4px">Saved</span>' : '';
-        var upBtn = i > 0 ? '<button type="button" class="reorder-btn" data-yt-up="' + i + '" title="Move up">&#9650;</button>' : '<span class="reorder-btn" style="visibility:hidden">&#9650;</span>';
-        var downBtn = i < len - 1 ? '<button type="button" class="reorder-btn" data-yt-down="' + i + '" title="Move down">&#9660;</button>' : '<span class="reorder-btn" style="visibility:hidden">&#9660;</span>';
-        return '<div class="yt-preview-item">' +
-          '<div style="display:flex;flex-direction:column;gap:2px">' + upBtn + downBtn + '</div>' +
-          '<img src="https://img.youtube.com/vi/' + v.youtubeId + '/default.jpg" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:4px">' +
-          savedLabel +
-          '<input type="text" placeholder="Video title" value="' + escapeHTML(v.title) + '" data-yt-idx="' + i + '" style="flex:1">' +
-          '<button type="button" class="remove-btn" data-yt-rm="' + i + '">&times;</button></div>';
-      }).join('');
-      container.querySelectorAll('[data-yt-idx]').forEach(function(inp) {
-        inp.addEventListener('input', function() {
-          var item = pendingYouTubeVideos[parseInt(inp.dataset.ytIdx)];
-          item.title = inp.value;
-          if (item.existing) item.titleChanged = true;
-        });
+    (function initUploadZone() {
+      var input = document.getElementById('f-videos');
+      var zone = document.getElementById('upload-zone');
+      if (!input || !zone) return;
+      input.addEventListener('change', function() {
+        for (var i = 0; i < input.files.length; i++) pendingVideoFiles.push(input.files[i]);
+        input.value = '';
+        renderVideoPreviews();
       });
-      container.querySelectorAll('[data-yt-up]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var idx = parseInt(btn.dataset.ytUp);
-          var temp = pendingYouTubeVideos[idx - 1];
-          pendingYouTubeVideos[idx - 1] = pendingYouTubeVideos[idx];
-          pendingYouTubeVideos[idx] = temp;
-          renderYtPreviews();
-        });
+      ['dragenter', 'dragover'].forEach(function(ev) {
+        zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('dragover'); });
       });
-      container.querySelectorAll('[data-yt-down]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var idx = parseInt(btn.dataset.ytDown);
-          var temp = pendingYouTubeVideos[idx + 1];
-          pendingYouTubeVideos[idx + 1] = pendingYouTubeVideos[idx];
-          pendingYouTubeVideos[idx] = temp;
-          renderYtPreviews();
-        });
+      ['dragleave', 'drop'].forEach(function(ev) {
+        zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.remove('dragover'); });
       });
-      container.querySelectorAll('[data-yt-rm]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var idx = parseInt(btn.dataset.ytRm);
-          var removed = pendingYouTubeVideos[idx];
-          if (removed.existing && removed.id) {
-            removedYouTubeIds.push(removed.id);
-          }
-          pendingYouTubeVideos.splice(idx, 1);
-          renderYtPreviews();
-        });
-      });
-    }
-
-    function saveYouTubeVideos(sessionId) {
-      var promises = [];
-      // Delete removed existing videos
-      removedYouTubeIds.forEach(function(id) {
-        promises.push(api.del('/api/youtube/' + id));
-      });
-      pendingYouTubeVideos.forEach(function(v, i) {
-        if (v.existing) {
-          // Update title and sort order for existing videos
-          promises.push(api.put('/api/youtube/' + v.id, { title: v.title, sortOrder: i }));
-        } else {
-          // Create new ones with sort order
-          promises.push(api.post('/api/youtube', { url: v.url, title: v.title, sessionId: sessionId, sortOrder: i }));
+      zone.addEventListener('drop', function(e) {
+        var files = (e.dataTransfer && e.dataTransfer.files) ? e.dataTransfer.files : [];
+        for (var i = 0; i < files.length; i++) {
+          if (files[i].type.indexOf('video/') === 0) pendingVideoFiles.push(files[i]);
         }
+        renderVideoPreviews();
       });
-      if (!promises.length) return Promise.resolve();
-      return Promise.all(promises);
+    })();
+
+    function renderVideoPreviews() {
+      var container = document.getElementById('video-previews');
+      if (!container) return;
+      var html = '';
+      existingVideos.forEach(function(v, i) {
+        html += '<div class="upload-preview-item">' +
+          '<video src="' + escapeHTML(v.url) + '" preload="metadata" muted playsinline></video>' +
+          '<div class="file-info">' +
+          '<span style="font-size:10px;color:var(--accent);margin-right:4px">Saved</span>' +
+          '<input type="text" value="' + escapeHTML(v.title) + '" data-existing-idx="' + i + '" placeholder="Video title" style="width:100%">' +
+          '</div>' +
+          '<button type="button" class="remove-btn" data-existing-rm="' + i + '">&times;</button></div>';
+      });
+      pendingVideoFiles.forEach(function(f, i) {
+        html += '<div class="upload-preview-item">' +
+          '<div style="width:80px;height:50px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border-radius:4px;color:var(--text-muted)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 8l6 4-6 4V8z"/></svg></div>' +
+          '<div class="file-info"><div class="file-name">' + escapeHTML(f.name) + '</div>' +
+          '<div class="file-size">' + formatSize(f.size) + '</div></div>' +
+          '<button type="button" class="remove-btn" data-pending-rm="' + i + '">&times;</button></div>';
+      });
+      container.innerHTML = html;
+
+      container.querySelectorAll('[data-existing-idx]').forEach(function(inp) {
+        inp.addEventListener('input', function() {
+          var v = existingVideos[parseInt(inp.dataset.existingIdx)];
+          v.title = inp.value;
+          v.titleChanged = true;
+        });
+      });
+      container.querySelectorAll('[data-existing-rm]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var idx = parseInt(btn.dataset.existingRm);
+          if (existingVideos[idx].id) removedVideoIds.push(existingVideos[idx].id);
+          existingVideos.splice(idx, 1);
+          renderVideoPreviews();
+        });
+      });
+      container.querySelectorAll('[data-pending-rm]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          pendingVideoFiles.splice(parseInt(btn.dataset.pendingRm), 1);
+          renderVideoPreviews();
+        });
+      });
+    }
+
+    function uploadVideosWithProgress(sessionId, files, onProgress) {
+      return new Promise(function(resolve, reject) {
+        var fd = new FormData();
+        fd.append('sessionId', sessionId);
+        files.forEach(function(f) { fd.append('videos', f); });
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/videos');
+        xhr.upload.onprogress = function(e) {
+          if (e.lengthComputable && onProgress) onProgress(e.loaded, e.total);
+        };
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try { resolve(JSON.parse(xhr.responseText)); } catch (err) { resolve([]); }
+          } else {
+            var msg = 'Upload failed';
+            try { msg = JSON.parse(xhr.responseText).error || msg; } catch (e) {}
+            reject({ error: msg });
+          }
+        };
+        xhr.onerror = function() { reject({ error: 'Upload failed (network error)' }); };
+        xhr.send(fd);
+      });
+    }
+
+    function saveSessionVideos(sessionId, saveBtn) {
+      var tasks = [];
+      removedVideoIds.forEach(function(id) { tasks.push(api.del('/api/videos/' + id)); });
+      existingVideos.forEach(function(v) {
+        if (v.id && v.titleChanged) tasks.push(api.put('/api/videos/' + v.id, { title: v.title }));
+      });
+      var chain = tasks.length ? Promise.all(tasks) : Promise.resolve();
+
+      if (pendingVideoFiles.length) {
+        var progressEl = document.getElementById('upload-progress');
+        if (progressEl) {
+          progressEl.style.display = 'block';
+          progressEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Uploading ' + pendingVideoFiles.length + ' video(s)...</div>';
+        }
+        var files = pendingVideoFiles;
+        chain = chain.then(function() {
+          return uploadVideosWithProgress(sessionId, files, function(loaded, total) {
+            if (saveBtn) saveBtn.textContent = 'Uploading ' + Math.round(loaded / total * 100) + '%';
+          });
+        }).then(function(res) {
+          if (progressEl) progressEl.style.display = 'none';
+          pendingVideoFiles = [];
+          return res;
+        });
+      }
+      return chain;
     }
 
     // ===================== CLIPS PAGE =====================
@@ -1249,7 +1281,7 @@
 
       api.get('/api/clips').then(function(clips) {
         if (!clips.length) {
-          content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M10 8l6 4-6 4V8z"/></svg></div><p>No clips yet. Create a clip from a YouTube video to get started.</p></div></div>';
+          content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M10 8l6 4-6 4V8z"/></svg></div><p>No clips yet. Upload a video to a session, then create a clip from it.</p></div></div>';
           return;
         }
         var html = '<div class="clips-grid">';
@@ -1258,8 +1290,9 @@
           var mins = Math.floor(duration / 60);
           var secs = duration % 60;
           var durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
+          var thumbUrl = '/uploads/' + encodeURIComponent(c.filename) + '#t=' + c.start_time;
           html += '<div class="clip-card" data-clip-id="' + c.id + '">' +
-            '<img src="https://img.youtube.com/vi/' + escapeHTML(c.youtube_id) + '/mqdefault.jpg" alt="">' +
+            '<video src="' + escapeHTML(thumbUrl) + '" preload="metadata" muted playsinline></video>' +
             '<div class="clip-info"><div class="clip-title">' + escapeHTML(c.title) + '</div>' +
             '<div class="clip-meta">' + escapeHTML(c.video_title || 'Untitled') + ' &middot; ' + durStr + '</div></div></div>';
         });
@@ -1273,27 +1306,27 @@
 
     document.getElementById('new-clip-btn').addEventListener('click', function() { showNewClipModal(); });
 
-    window.showNewClipModalFor = function(videoId, videoTitle) {
+    window.showNewClipModalFor = function(videoId) {
       showNewClipModal(videoId);
     };
 
     function showNewClipModal(preselectedVideoId) {
-      api.get('/api/youtube').then(function(ytVideos) {
+      api.get('/api/videos').then(function(videos) {
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
-        var videoOptions = ytVideos.map(function(v) {
+        var videoOptions = videos.map(function(v) {
           var selected = v.id === preselectedVideoId ? ' selected' : '';
-          return '<option value="' + v.id + '"' + selected + '>' + escapeHTML(v.title || v.youtube_id) + '</option>';
+          return '<option value="' + v.id + '"' + selected + '>' + escapeHTML(v.title || v.name || 'Untitled') + '</option>';
         }).join('');
-        if (!ytVideos.length) {
-          videoOptions = '<option value="">No YouTube videos available</option>';
+        if (!videos.length) {
+          videoOptions = '<option value="">No videos available</option>';
         }
         var selectDisabled = preselectedVideoId ? ' disabled' : '';
-        var hiddenInput = preselectedVideoId ? '<input type="hidden" id="clip-yt-hidden" value="' + preselectedVideoId + '">' : '';
+        var hiddenInput = preselectedVideoId ? '<input type="hidden" id="clip-video-hidden" value="' + preselectedVideoId + '">' : '';
         overlay.innerHTML = '<div class="modal" style="max-width:460px">' +
           '<h3>Create Clip</h3>' +
           hiddenInput +
-          '<div class="form-group" style="margin-bottom:12px"><label>YouTube Video</label><select id="clip-yt-select" style="width:100%"' + selectDisabled + '>' + videoOptions + '</select></div>' +
+          '<div class="form-group" style="margin-bottom:12px"><label>Video</label><select id="clip-video-select" style="width:100%"' + selectDisabled + '>' + videoOptions + '</select></div>' +
           '<div class="form-group" style="margin-bottom:12px"><label>Clip Title</label><input type="text" id="clip-title" placeholder="e.g. Backhand winner"></div>' +
           '<div style="display:flex;gap:10px;margin-bottom:12px">' +
           '<div class="form-group" style="flex:1"><label>Start Time (mm:ss)</label><input type="text" id="clip-start" placeholder="0:00" value="0:00"></div>' +
@@ -1306,14 +1339,14 @@
         overlay.querySelector('#clip-cancel').onclick = function() { overlay.remove(); };
         overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
         overlay.querySelector('#clip-save').onclick = function() {
-          var hiddenEl = overlay.querySelector('#clip-yt-hidden');
-          var ytVideoId = hiddenEl ? hiddenEl.value : overlay.querySelector('#clip-yt-select').value;
+          var hiddenEl = overlay.querySelector('#clip-video-hidden');
+          var videoId = hiddenEl ? hiddenEl.value : overlay.querySelector('#clip-video-select').value;
           var title = overlay.querySelector('#clip-title').value.trim();
           var startTime = parseTimeInput(overlay.querySelector('#clip-start').value);
           var endTime = parseTimeInput(overlay.querySelector('#clip-end').value);
           var notes = overlay.querySelector('#clip-notes').value.trim();
           var errEl = overlay.querySelector('#clip-form-error');
-          if (!ytVideoId || !title) {
+          if (!videoId || !title) {
             errEl.textContent = 'Please select a video and enter a title.';
             errEl.style.display = 'inline';
             return;
@@ -1329,12 +1362,13 @@
             return;
           }
           api.post('/api/clips', {
-            youtubeVideoId: ytVideoId,
+            videoId: videoId,
             title: title,
             startTime: startTime,
             endTime: endTime,
             notes: notes
           }).then(function(clip) {
+            if (clip && clip.error) { errEl.textContent = clip.error; errEl.style.display = 'inline'; return; }
             overlay.remove();
             showClipDetail(clip.id);
           });
@@ -1357,7 +1391,7 @@
 
         var html = '<h1>' + escapeHTML(clip.title) + '</h1>' +
           '<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">' + escapeHTML(clip.video_title || 'Untitled video') + ' &middot; ' + timeStr + ' (' + durStr + ')</div>' +
-          '<div class="clip-detail-player"><div id="clip-yt-player"></div></div>';
+          '<div class="clip-detail-player"><video id="clip-video" src="' + escapeHTML('/uploads/' + encodeURIComponent(clip.filename)) + '#t=' + clip.start_time + ',' + clip.end_time + '" controls preload="metadata" playsinline></video></div>';
 
         if (clip.notes) {
           html += '<div class="card" style="margin-bottom:14px"><div class="detail-field"><div class="label">Notes</div><div class="value" style="font-size:13px;line-height:1.6;font-weight:400">' + escapeHTML(clip.notes) + '</div></div></div>';
@@ -1380,34 +1414,22 @@
         document.getElementById('clip-detail-content').innerHTML = html;
         navigate('clip-detail');
 
-        // Initialize YouTube IFrame Player API for clip looping and boundary enforcement
-        if (window.clipPlayer) { try { window.clipPlayer.destroy(); } catch(e) {} }
-        if (window.clipBoundaryCheck) clearInterval(window.clipBoundaryCheck);
-        window.clipPlayer = new YT.Player('clip-yt-player', {
-          videoId: clip.youtube_id,
-          playerVars: { start: clip.start_time, end: clip.end_time, autoplay: 0, rel: 0 },
-          events: {
-            onReady: function() {
-              window.clipBoundaryCheck = setInterval(function() {
-                if (!window.clipPlayer || !window.clipPlayer.getCurrentTime) return;
-                var t = window.clipPlayer.getCurrentTime();
-                var state = window.clipPlayer.getPlayerState();
-                if (state === YT.PlayerState.PLAYING) {
-                  if (t < clip.start_time - 0.5 || t >= clip.end_time) {
-                    window.clipPlayer.seekTo(clip.start_time, true);
-                    window.clipPlayer.pauseVideo();
-                  }
-                }
-              }, 300);
-            },
-            onStateChange: function(event) {
-              if (event.data === YT.PlayerState.ENDED) {
-                window.clipPlayer.seekTo(clip.start_time, true);
-                window.clipPlayer.pauseVideo();
-              }
+        // Native <video> clip player: enforce the [start_time, end_time] boundary and
+        // loop back to the start on replay. The #t=start,end media fragment sets the
+        // initial in/out points; the handlers below keep playback inside them.
+        var clipVideo = document.getElementById('clip-video');
+        if (clipVideo) {
+          var toClipStart = function() { try { clipVideo.currentTime = clip.start_time; } catch (e) {} };
+          clipVideo.addEventListener('loadedmetadata', toClipStart);
+          clipVideo.addEventListener('timeupdate', function() {
+            if (clipVideo.currentTime >= clip.end_time) {
+              clipVideo.pause();
+              toClipStart();
+            } else if (clipVideo.currentTime < clip.start_time - 0.3) {
+              toClipStart();
             }
-          }
-        });
+          });
+        }
 
         loadClipComments(clipId);
 

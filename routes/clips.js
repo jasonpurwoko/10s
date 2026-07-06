@@ -7,12 +7,14 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-// GET all clips (optionally by youtubeVideoId)
+var CLIP_SELECT = 'SELECT c.*, v.filename, v.name AS video_name, v.title AS video_title FROM clips c JOIN videos v ON c.video_id = v.id';
+
+// GET all clips (optionally by videoId)
 router.get('/', async function(req, res) {
-  var sql = 'SELECT c.*, y.youtube_id, y.title as video_title, y.url as video_url FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id';
-  if (req.query.youtubeVideoId) {
-    sql += ' WHERE c.youtube_video_id = ? ORDER BY c.created_at DESC';
-    var [rows] = await db.pool.execute(sql, [req.query.youtubeVideoId]);
+  var sql = CLIP_SELECT;
+  if (req.query.videoId) {
+    sql += ' WHERE c.video_id = ? ORDER BY c.created_at DESC';
+    var [rows] = await db.pool.execute(sql, [req.query.videoId]);
     res.json(rows);
   } else {
     sql += ' ORDER BY c.created_at DESC';
@@ -23,10 +25,7 @@ router.get('/', async function(req, res) {
 
 // GET one clip
 router.get('/:id', async function(req, res) {
-  var [rows] = await db.pool.execute(
-    'SELECT c.*, y.youtube_id, y.title as video_title, y.url as video_url FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?',
-    [req.params.id]
-  );
+  var [rows] = await db.pool.execute(CLIP_SELECT + ' WHERE c.id = ?', [req.params.id]);
   if (!rows.length) return res.status(404).json({ error: 'Not found' });
   res.json(rows[0]);
 });
@@ -34,25 +33,22 @@ router.get('/:id', async function(req, res) {
 // POST create clip (public)
 router.post('/', async function(req, res) {
   var b = req.body;
-  if (!b.youtubeVideoId || b.startTime === undefined || b.endTime === undefined || !b.title) {
+  if (!b.videoId || b.startTime === undefined || b.endTime === undefined || !b.title) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   if (b.startTime >= b.endTime) {
     return res.status(400).json({ error: 'Start time must be before end time' });
   }
-  var [ytRows] = await db.pool.execute('SELECT id FROM youtube_videos WHERE id = ?', [b.youtubeVideoId]);
-  if (!ytRows.length) return res.status(400).json({ error: 'YouTube video not found' });
+  var [vRows] = await db.pool.execute('SELECT id FROM videos WHERE id = ?', [b.videoId]);
+  if (!vRows.length) return res.status(400).json({ error: 'Video not found' });
 
   var id = genId();
   await db.pool.execute(
-    'INSERT INTO clips (id, youtube_video_id, title, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, b.youtubeVideoId, b.title, b.startTime, b.endTime, b.notes || '']
+    'INSERT INTO clips (id, video_id, title, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, b.videoId, b.title, b.startTime, b.endTime, b.notes || '']
   );
 
-  var [rows] = await db.pool.execute(
-    'SELECT c.*, y.youtube_id, y.title as video_title FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?',
-    [id]
-  );
+  var [rows] = await db.pool.execute(CLIP_SELECT + ' WHERE c.id = ?', [id]);
   res.json(rows[0]);
 });
 
@@ -69,10 +65,7 @@ router.put('/:id', requireAdmin, async function(req, res) {
     b.notes !== undefined ? b.notes : existing.notes,
     req.params.id
   ]);
-  var [updated] = await db.pool.execute(
-    'SELECT c.*, y.youtube_id, y.title as video_title FROM clips c JOIN youtube_videos y ON c.youtube_video_id = y.id WHERE c.id = ?',
-    [req.params.id]
-  );
+  var [updated] = await db.pool.execute(CLIP_SELECT + ' WHERE c.id = ?', [req.params.id]);
   res.json(updated[0]);
 });
 
