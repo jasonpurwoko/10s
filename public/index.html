@@ -490,6 +490,69 @@
     }
     .yt-card .yt-card-actions button:hover { background: var(--border); }
 
+    /* ---------- Rally Player ---------- */
+    .rp-video-wrap { position: relative; width: 100%; margin-bottom: 14px; }
+    .rp-video-wrap video {
+      width: 100%; aspect-ratio: 16/9; border: none; border-radius: var(--radius); background: #000; display: block;
+    }
+    /* Transparent gesture layer over the picture; bottom strip left open for native controls */
+    .rp-overlay { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; cursor: pointer; }
+
+    .rp-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .rp-mode { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+    .rp-mode button {
+      background: var(--surface2); border: none; color: var(--text-muted); font-size: 12px;
+      padding: 7px 14px; cursor: pointer; font-family: inherit; font-weight: 600;
+    }
+    .rp-mode button.active { background: var(--accent-dim); color: var(--accent); }
+    .rp-nav-btn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .rp-nav-btn:hover { background: var(--border); }
+    .rp-rally-counter { font-size: 13px; font-weight: 600; min-width: 90px; }
+    .rp-time-label { font-size: 12px; color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+    .rp-scrub-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .rp-timeline {
+      position: relative; height: 34px; background: var(--surface2); border-radius: 6px;
+      cursor: pointer; overflow: hidden; touch-action: none; margin-bottom: 14px;
+      border: 1px solid var(--border);
+    }
+    .rp-timeline .rp-seg {
+      position: absolute; top: 0; bottom: 0; background: rgba(61, 184, 140, 0.4);
+      border-left: 1px solid rgba(61, 184, 140, 0.9); border-right: 1px solid rgba(61, 184, 140, 0.9);
+    }
+    .rp-timeline .rp-seg.active { background: rgba(61, 184, 140, 0.75); }
+    .rp-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; pointer-events: none; box-shadow: 0 0 4px rgba(0,0,0,0.6); z-index: 3; }
+    .rp-markin-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--orange); pointer-events: none; z-index: 2; }
+    .rp-rally-fill { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(61, 184, 140, 0.55); pointer-events: none; }
+    .rp-timeline.rp-disabled { opacity: 0.45; cursor: default; }
+    .rp-scrub-times { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: -10px; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+
+    .rp-mark-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
+    .rp-mark-hint kbd {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+      padding: 1px 6px; font-size: 11px; font-family: inherit; color: var(--text);
+    }
+    #rp-mark-status { color: var(--orange); font-weight: 600; }
+    .rp-seg-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .rp-seg-row:last-of-type { border-bottom: none; }
+    .rp-seg-row .rp-seg-idx { font-size: 12px; color: var(--text-muted); width: 24px; flex-shrink: 0; }
+    .rp-seg-row input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; color: var(--text); font-size: 12px; font-family: inherit; outline: none; }
+    .rp-seg-row input:focus { border-color: var(--accent); }
+    .rp-seg-row .rp-in, .rp-seg-row .rp-out { width: 74px; font-variant-numeric: tabular-nums; }
+    .rp-seg-row .rp-label { flex: 1; min-width: 60px; }
+    .rp-seg-row .rp-seg-del { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 4px; }
+    .rp-seg-row .rp-seg-del:hover { color: var(--red); background: rgba(232,91,91,0.1); }
+    .rp-seg-row.active { background: var(--accent-dim); border-radius: 6px; }
+    #rp-bulk textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      padding: 9px 12px; color: var(--text); font-size: 12px; font-family: monospace;
+      outline: none; resize: vertical; min-height: 70px; margin-bottom: 10px;
+    }
+
     /* Responsive */
     @media (max-width: 860px) {
       .sidebar { width: 56px; padding: 16px 6px; align-items: center; }
@@ -622,6 +685,12 @@
         <div id="clip-detail-content"></div>
       </div>
 
+      <!-- Rally Player -->
+      <div id="page-play" class="page">
+        <button class="detail-back" id="play-back">&larr; Back to session</button>
+        <div id="play-content"></div>
+      </div>
+
       <!-- Calendar -->
     </main>
   </div>
@@ -719,7 +788,9 @@
 
     window.navigate = function(page, opts) {
       if (page === 'log' && !isAdmin) { navigate('dashboard'); return; }
+      var prevPage = currentPage;
       currentPage = page;
+      if (prevPage === 'play' && page !== 'play') destroyRallyPlayer();
       document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
       document.getElementById('page-' + page).classList.add('active');
       navBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.page === page); });
@@ -731,6 +802,8 @@
           window.location.hash = '/session/' + currentDetailId;
         } else if (page === 'clip-detail' && currentClipId) {
           window.location.hash = '/clip/' + currentClipId;
+        } else if (page === 'play' && currentPlayVideoId) {
+          window.location.hash = '/play/' + currentPlayVideoId;
         } else {
           window.location.hash = '/' + page;
         }
@@ -745,6 +818,8 @@
 
     var currentDetailId = null;
     var currentClipId = null;
+    var currentPlayVideoId = null;
+
     function handleRoute() {
       var hash = window.location.hash.replace('#', '') || '/dashboard';
       var parts = hash.split('/').filter(function(p) { return p; });
@@ -755,6 +830,8 @@
         showDetail(id);
       } else if (page === 'clip' && id) {
         showClipDetail(id);
+      } else if (page === 'play' && id) {
+        showRallyPlayer(id);
       } else if (['dashboard', 'sessions', 'log', 'clips'].indexOf(page) !== -1) {
         navigate(page, { skipHash: true });
       } else {
@@ -1021,7 +1098,9 @@
             return '<div class="yt-card">' +
               '<video src="' + escapeHTML(v.url) + '" controls preload="metadata" playsinline></video>' +
               '<div class="yt-card-info"><div class="yt-card-title">' + escapeHTML(v.title || v.name || 'Untitled') + '</div>' +
-              '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="showNewClipModalFor(\'' + v.id + '\')">+ Create Clip</button></div></div>';
+              '<div class="yt-card-actions">' +
+              '<button class="btn" style="font-size:11px;padding:4px 10px" onclick="showRallyPlayer(\'' + v.id + '\')">&#9654; Rally Player</button>' +
+              '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="showNewClipModalFor(\'' + v.id + '\')">+ Create Clip</button></div></div></div>';
           }).join('');
         });
       });
@@ -1498,6 +1577,497 @@
     }
 
     document.getElementById('clip-detail-back').addEventListener('click', function() { navigate('clips'); });
+
+    // ===================== RALLY PLAYER =====================
+    // SwingVision-style playback: ordered rally_segments are active play, the gaps
+    // between them are dead time. "Rallies only" mode skips the gaps using
+    // requestVideoFrameCallback (frame-accurate mediaTime); timeupdate is too
+    // coarse for the skip check and is not used for it.
+    var rp = null; // active player state; null when the play page is not showing
+    var RP_EPS = 0.03;
+
+    // Stub for future CV-based segmentation. Intentionally not implemented.
+    window.autoDetectSegments = function(videoId) {
+      return Promise.reject(new Error('Automatic rally detection is not implemented yet'));
+    };
+
+    function destroyRallyPlayer() {
+      if (!rp) return;
+      try { rp.video.pause(); } catch (e) {}
+      rp = null; // frame loops check this and stop themselves
+    }
+
+    function fmtSec(t) {
+      if (!isFinite(t) || t < 0) t = 0;
+      var m = Math.floor(t / 60);
+      var s = Math.floor(t % 60);
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
+    // m:ss.t — used in the segment editor where sub-second precision matters
+    function fmtSecPrecise(t) {
+      if (!isFinite(t) || t < 0) t = 0;
+      t = Math.round(t * 10) / 10;
+      var m = Math.floor(t / 60);
+      var s = (t - m * 60).toFixed(1);
+      return m + ':' + (parseFloat(s) < 10 ? '0' : '') + s;
+    }
+
+    // Accepts "m:ss", "m:ss.s" or plain (fractional) seconds
+    function parseTimeFloat(val) {
+      val = String(val).trim();
+      if (!val) return null;
+      if (val.indexOf(':') !== -1) {
+        var p = val.split(':');
+        var m = parseInt(p[0], 10);
+        var s = parseFloat(p[1]);
+        if (isNaN(m) || isNaN(s) || m < 0 || s < 0 || s >= 60) return null;
+        return m * 60 + s;
+      }
+      var n = parseFloat(val);
+      return (isNaN(n) || n < 0) ? null : n;
+    }
+
+    function normalizeSegments(list) {
+      return (list || []).map(function(s) {
+        return { id: s.id, start_sec: Number(s.start_sec), end_sec: Number(s.end_sec), label: s.label || '' };
+      });
+    }
+
+    window.showRallyPlayer = function(videoId) {
+      Promise.all([
+        api.get('/api/videos/' + videoId),
+        api.get('/api/segments?videoId=' + videoId)
+      ]).then(function(results) {
+        var video = results[0];
+        var segments = results[1];
+        if (!video || video.error) return;
+        currentPlayVideoId = videoId;
+        renderRallyPlayer(video, normalizeSegments(Array.isArray(segments) ? segments : []));
+        navigate('play');
+      });
+    };
+
+    function renderRallyPlayer(videoData, segments) {
+      var html =
+        '<h1 style="margin-bottom:4px">' + escapeHTML(videoData.title || videoData.name || 'Untitled') + '</h1>' +
+        '<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Rally Player &middot; double-click left/right side of the video (or use &larr; &rarr;) to jump between rallies</div>' +
+        '<div class="rp-video-wrap">' +
+          '<video id="rp-video" src="' + escapeHTML(videoData.url) + '" controls preload="metadata" playsinline></video>' +
+          '<div class="rp-overlay" id="rp-overlay"></div>' +
+        '</div>' +
+        '<div class="rp-toolbar">' +
+          '<div class="rp-mode">' +
+            '<button id="rp-mode-rallies" class="active">Rallies only</button>' +
+            '<button id="rp-mode-full">Full video</button>' +
+          '</div>' +
+          '<button class="rp-nav-btn" id="rp-prev">&#9198; Prev</button>' +
+          '<button class="rp-nav-btn" id="rp-next">Next &#9197;</button>' +
+          '<span class="rp-rally-counter" id="rp-counter">&mdash;</span>' +
+          '<span class="rp-time-label" id="rp-time">0:00 / 0:00</span>' +
+        '</div>' +
+        '<div class="rp-scrub-label">Entire video</div>' +
+        '<div class="rp-timeline" id="rp-full-bar"><div class="rp-playhead" id="rp-full-head" style="left:0"></div></div>' +
+        '<div class="rp-scrub-label">Current rally</div>' +
+        '<div class="rp-timeline" id="rp-rally-bar"><div class="rp-rally-fill" id="rp-rally-fill" style="width:0"></div><div class="rp-playhead" id="rp-rally-head" style="left:0"></div></div>' +
+        '<div class="rp-scrub-times"><span id="rp-rally-t0">&ndash;</span><span id="rp-rally-t1">&ndash;</span></div>';
+
+      if (isAdmin) {
+        html += '<div class="card">' +
+          '<div class="card-title">Rally segments</div>' +
+          '<div class="rp-mark-hint">Press <kbd>[</kbd> to mark IN at the playhead, then <kbd>]</kbd> to mark OUT and save the rally. <span id="rp-mark-status"></span></div>' +
+          '<div id="rp-seg-list"></div>' +
+          '<div class="btn-row">' +
+            '<button class="btn" id="rp-save-segs">Save changes</button>' +
+            '<button class="btn btn-secondary" id="rp-bulk-toggle">Bulk import JSON</button>' +
+            '<span id="rp-seg-error" style="color:var(--red);font-size:12px;display:none"></span>' +
+          '</div>' +
+          '<div id="rp-bulk" style="display:none;margin-top:12px">' +
+            '<textarea id="rp-bulk-json" placeholder=\'[{"start": 12.5, "end": 30.2}, {"start": 45, "end": 71.8}]\'></textarea>' +
+            '<button class="btn" id="rp-bulk-apply">Replace all segments</button>' +
+          '</div></div>';
+      } else {
+        html += '<div class="rp-mark-hint" id="rp-ro-note"></div>';
+      }
+
+      document.getElementById('play-content').innerHTML = html;
+
+      var v = document.getElementById('rp-video');
+      rp = {
+        video: v,
+        videoData: videoData,
+        segments: segments,
+        mode: 'rallies',
+        duration: Number(videoData.duration) || 0,
+        markIn: null,
+        dragging: false
+      };
+      var self = rp;
+
+      // ---- helpers over rp.segments ----
+      function segAt(t) {
+        for (var i = 0; i < self.segments.length; i++) {
+          var s = self.segments[i];
+          if (t >= s.start_sec - 0.05 && t < s.end_sec + 0.05) return i;
+        }
+        return -1;
+      }
+      function segForNav(t) { // last segment whose start is at/behind the playhead
+        var idx = -1;
+        for (var i = 0; i < self.segments.length; i++) {
+          if (self.segments[i].start_sec <= t + 0.1) idx = i;
+        }
+        return idx;
+      }
+      function jumpRally(dir) {
+        if (!self.segments.length) return;
+        var i = segForNav(v.currentTime);
+        var target = Math.min(self.segments.length - 1, Math.max(0, i + dir));
+        v.currentTime = self.segments[target].start_sec;
+      }
+      self.jumpRally = jumpRally;
+
+      // ---- core auto-skip check (called with frame-accurate mediaTime) ----
+      function checkSkip(t) {
+        if (!self.segments.length || self.mode !== 'rallies') return;
+        if (v.paused || v.seeking || self.dragging) return;
+        var segs = self.segments;
+        for (var i = 0; i < segs.length; i++) {
+          if (t < segs[i].end_sec - RP_EPS) {
+            if (t >= segs[i].start_sec - RP_EPS) return; // inside rally i — play on
+            v.currentTime = segs[i].start_sec;           // dead time — skip ahead
+            return;
+          }
+        }
+        // Past the end of the last rally: stop.
+        v.pause();
+        v.currentTime = segs[segs.length - 1].end_sec;
+      }
+
+      // Replaying after the final rally in rallies-only mode restarts at rally 0.
+      v.addEventListener('play', function() {
+        if (self.mode === 'rallies' && self.segments.length &&
+            v.currentTime >= self.segments[self.segments.length - 1].end_sec - RP_EPS) {
+          v.currentTime = self.segments[0].start_sec;
+        }
+      });
+
+      // ---- frame loops ----
+      // rvfc: frame-accurate skip while playing. rAF: UI updates (rvfc does not
+      // fire while paused) and the skip fallback for browsers without rvfc.
+      var hasRvfc = typeof v.requestVideoFrameCallback === 'function';
+      if (hasRvfc) {
+        var onFrame = function(now, meta) {
+          if (rp !== self) return;
+          checkSkip(meta.mediaTime);
+          v.requestVideoFrameCallback(onFrame);
+        };
+        v.requestVideoFrameCallback(onFrame);
+      }
+      var onRaf = function() {
+        if (rp !== self) return;
+        if (!hasRvfc) checkSkip(v.currentTime);
+        updateUI(v.currentTime);
+        requestAnimationFrame(onRaf);
+      };
+      requestAnimationFrame(onRaf);
+      // Hidden-tab safety net: rAF/rvfc are suspended while the page is not
+      // visible but playback keeps running, so poll coarsely to keep the
+      // auto-skip working until the tab is visible again.
+      var hiddenPoll = setInterval(function() {
+        if (rp !== self) { clearInterval(hiddenPoll); return; }
+        if (document.hidden) { checkSkip(v.currentTime); updateUI(v.currentTime); }
+      }, 250);
+
+      v.addEventListener('loadedmetadata', function() {
+        if (isFinite(v.duration) && v.duration > 0) self.duration = v.duration;
+        drawFullBarSegments();
+      });
+
+      // ---- scrubbers ----
+      var fullBar = document.getElementById('rp-full-bar');
+      var fullHead = document.getElementById('rp-full-head');
+      var rallyBar = document.getElementById('rp-rally-bar');
+      var rallyFill = document.getElementById('rp-rally-fill');
+      var rallyHead = document.getElementById('rp-rally-head');
+
+      function drawFullBarSegments() {
+        // Rebuild segment regions (playhead + IN marker survive as fixed children)
+        fullBar.querySelectorAll('.rp-seg, .rp-markin-line').forEach(function(el) { el.remove(); });
+        if (!self.duration) return;
+        self.segments.forEach(function(s, i) {
+          var el = document.createElement('div');
+          el.className = 'rp-seg';
+          el.dataset.idx = i;
+          el.style.left = (s.start_sec / self.duration * 100) + '%';
+          el.style.width = (Math.max(0, s.end_sec - s.start_sec) / self.duration * 100) + '%';
+          el.title = 'Rally ' + (i + 1) + (s.label ? ': ' + s.label : '') + ' (' + fmtSecPrecise(s.start_sec) + ' – ' + fmtSecPrecise(s.end_sec) + ')';
+          fullBar.appendChild(el);
+        });
+        if (self.markIn !== null) {
+          var m = document.createElement('div');
+          m.className = 'rp-markin-line';
+          m.style.left = (self.markIn / self.duration * 100) + '%';
+          fullBar.appendChild(m);
+        }
+      }
+      self.drawFullBarSegments = drawFullBarSegments;
+      drawFullBarSegments();
+
+      function barFrac(bar, e) {
+        var rect = bar.getBoundingClientRect();
+        return Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      }
+
+      // Entire-video scrubber: seeks anywhere in [0, duration]
+      fullBar.addEventListener('pointerdown', function(e) {
+        if (!self.duration) return;
+        self.dragging = true;
+        try { fullBar.setPointerCapture(e.pointerId); } catch (err) {}
+        v.currentTime = barFrac(fullBar, e) * self.duration;
+      });
+      fullBar.addEventListener('pointermove', function(e) {
+        if (self.dragging && self.duration) v.currentTime = barFrac(fullBar, e) * self.duration;
+      });
+      ['pointerup', 'pointercancel'].forEach(function(ev) {
+        fullBar.addEventListener(ev, function() { self.dragging = false; });
+        rallyBar.addEventListener(ev, function() { self.dragging = false; self.rallyDragIdx = -1; });
+      });
+
+      // Current-rally scrubber: seeks only within the active segment
+      rallyBar.addEventListener('pointerdown', function(e) {
+        var idx = segAt(v.currentTime);
+        if (idx === -1) return;
+        self.dragging = true;
+        self.rallyDragIdx = idx;
+        try { rallyBar.setPointerCapture(e.pointerId); } catch (err) {}
+        var s = self.segments[idx];
+        v.currentTime = s.start_sec + barFrac(rallyBar, e) * (s.end_sec - s.start_sec);
+      });
+      rallyBar.addEventListener('pointermove', function(e) {
+        if (!self.dragging || self.rallyDragIdx === undefined || self.rallyDragIdx < 0) return;
+        var s = self.segments[self.rallyDragIdx];
+        if (!s) return;
+        v.currentTime = Math.min(s.end_sec, Math.max(s.start_sec, s.start_sec + barFrac(rallyBar, e) * (s.end_sec - s.start_sec)));
+      });
+
+      // ---- UI refresh (rAF-driven) ----
+      var counterEl = document.getElementById('rp-counter');
+      var timeEl = document.getElementById('rp-time');
+      var t0El = document.getElementById('rp-rally-t0');
+      var t1El = document.getElementById('rp-rally-t1');
+
+      function updateUI(t) {
+        timeEl.textContent = fmtSec(t) + ' / ' + fmtSec(self.duration);
+        if (self.duration) fullHead.style.left = (t / self.duration * 100) + '%';
+
+        var idx = segAt(t);
+        if (idx >= 0) {
+          var s = self.segments[idx];
+          var frac = Math.min(1, Math.max(0, (t - s.start_sec) / (s.end_sec - s.start_sec)));
+          rallyFill.style.width = (frac * 100) + '%';
+          rallyHead.style.left = (frac * 100) + '%';
+          rallyBar.classList.remove('rp-disabled');
+          counterEl.textContent = 'Rally ' + (idx + 1) + ' / ' + self.segments.length;
+          t0El.textContent = fmtSecPrecise(s.start_sec);
+          t1El.textContent = fmtSecPrecise(s.end_sec);
+        } else {
+          rallyFill.style.width = '0';
+          rallyHead.style.left = '0';
+          rallyBar.classList.add('rp-disabled');
+          counterEl.textContent = self.segments.length ? 'Dead time' : 'No rallies yet';
+          t0El.textContent = '–';
+          t1El.textContent = '–';
+        }
+        // Highlight the active region / editor row
+        fullBar.querySelectorAll('.rp-seg').forEach(function(el) {
+          el.classList.toggle('active', parseInt(el.dataset.idx) === idx);
+        });
+        var list = document.getElementById('rp-seg-list');
+        if (list) {
+          list.querySelectorAll('.rp-seg-row').forEach(function(row, i) {
+            row.classList.toggle('active', i === idx);
+          });
+        }
+      }
+
+      // ---- mode toggle ----
+      var btnRallies = document.getElementById('rp-mode-rallies');
+      var btnFull = document.getElementById('rp-mode-full');
+      function setMode(mode) {
+        self.mode = mode;
+        btnRallies.classList.toggle('active', mode === 'rallies');
+        btnFull.classList.toggle('active', mode === 'full');
+      }
+      btnRallies.addEventListener('click', function() { setMode('rallies'); });
+      btnFull.addEventListener('click', function() { setMode('full'); });
+
+      // ---- prev/next: buttons + double-click zones on the picture ----
+      document.getElementById('rp-prev').addEventListener('click', function() { jumpRally(-1); });
+      document.getElementById('rp-next').addEventListener('click', function() { jumpRally(1); });
+
+      var overlay = document.getElementById('rp-overlay');
+      var clickTimer = null;
+      overlay.addEventListener('click', function() {
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; return; } // second click of a double-click
+        clickTimer = setTimeout(function() {
+          clickTimer = null;
+          if (v.paused) v.play(); else v.pause();
+        }, 250);
+      });
+      overlay.addEventListener('dblclick', function(e) {
+        e.preventDefault();
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        var frac = barFrac(overlay, e);
+        if (frac < 1 / 3) jumpRally(-1);
+        else if (frac > 2 / 3) jumpRally(1);
+        // middle third: no-op (single click already toggles play/pause)
+      });
+
+      if (isAdmin) initSegmentEditor(self);
+      else {
+        document.getElementById('rp-ro-note').textContent = self.segments.length
+          ? '' : 'No rallies have been marked on this video yet.';
+      }
+    }
+
+    document.getElementById('play-back').addEventListener('click', function() {
+      var sessionId = rp && rp.videoData && rp.videoData.session_id;
+      if (sessionId) showDetail(sessionId); else navigate('sessions');
+    });
+
+    // ---- keyboard: arrows = prev/next rally, [ ] = mark in/out (admin) ----
+    document.addEventListener('keydown', function(e) {
+      if (currentPage !== 'play' || !rp) return;
+      var tag = (e.target && e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); rp.jumpRally(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); rp.jumpRally(1); }
+      else if (e.key === '[' && isAdmin) { e.preventDefault(); rpSetMarkIn(); }
+      else if (e.key === ']' && isAdmin) { e.preventDefault(); rpCommitMarkOut(); }
+    });
+
+    function rpShowSegError(msg) {
+      var el = document.getElementById('rp-seg-error');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.style.display = msg ? 'inline' : 'none';
+    }
+
+    function rpSetMarkIn() {
+      if (!rp) return;
+      rp.markIn = rp.video.currentTime;
+      var st = document.getElementById('rp-mark-status');
+      if (st) st.textContent = 'IN set at ' + fmtSecPrecise(rp.markIn) + ' — press ] to save';
+      rp.drawFullBarSegments();
+      rpShowSegError('');
+    }
+
+    function rpCommitMarkOut() {
+      if (!rp) return;
+      if (rp.markIn === null) { rpShowSegError('Press [ first to set the IN point.'); return; }
+      var start = Math.round(rp.markIn * 1000) / 1000;
+      var end = Math.round(rp.video.currentTime * 1000) / 1000;
+      if (end <= start + 0.05) { rpShowSegError('OUT must be after IN — keep playing, then press ].'); return; }
+      var overlap = rp.segments.some(function(s) { return start < s.end_sec && end > s.start_sec; });
+      if (overlap) { rpShowSegError('New rally overlaps an existing one.'); return; }
+
+      var next = rp.segments.map(function(s) { return { start_sec: s.start_sec, end_sec: s.end_sec, label: s.label }; });
+      next.push({ start_sec: start, end_sec: end, label: '' });
+      next.sort(function(a, b) { return a.start_sec - b.start_sec; });
+      rpSaveSegments(next).then(function(ok) {
+        if (ok) {
+          rp.markIn = null;
+          var st = document.getElementById('rp-mark-status');
+          if (st) st.textContent = '';
+        }
+      });
+    }
+
+    // PUT replace-all, then refresh local state + both scrubbers + editor list
+    function rpSaveSegments(list) {
+      if (!rp) return Promise.resolve(false);
+      var self = rp;
+      return api.put('/api/segments/' + self.videoData.id, { segments: list }).then(function(result) {
+        if (result && result.error) { rpShowSegError(result.error); return false; }
+        self.segments = normalizeSegments(result);
+        self.drawFullBarSegments();
+        if (isAdmin) rpRenderSegList();
+        rpShowSegError('');
+        return true;
+      });
+    }
+
+    function rpRenderSegList() {
+      var list = document.getElementById('rp-seg-list');
+      if (!list || !rp) return;
+      if (!rp.segments.length) {
+        list.innerHTML = '<div class="empty-state" style="padding:12px"><p style="font-size:12px">No rallies marked yet. Play the video and use [ and ], or bulk-import JSON below.</p></div>';
+        return;
+      }
+      list.innerHTML = rp.segments.map(function(s, i) {
+        return '<div class="rp-seg-row" data-id="' + s.id + '">' +
+          '<span class="rp-seg-idx">' + (i + 1) + '</span>' +
+          '<input class="rp-in" value="' + fmtSecPrecise(s.start_sec) + '" title="Start (m:ss.s)">' +
+          '<span style="color:var(--text-muted)">&ndash;</span>' +
+          '<input class="rp-out" value="' + fmtSecPrecise(s.end_sec) + '" title="End (m:ss.s)">' +
+          '<input class="rp-label" value="' + escapeHTML(s.label) + '" placeholder="Label (optional)">' +
+          '<button class="rp-seg-del" title="Delete rally" data-seg-id="' + s.id + '">&times;</button></div>';
+      }).join('');
+      list.querySelectorAll('.rp-seg-del').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          api.del('/api/segments/' + btn.dataset.segId).then(function() {
+            if (!rp) return;
+            return api.get('/api/segments?videoId=' + rp.videoData.id).then(function(segs) {
+              rp.segments = normalizeSegments(segs);
+              rp.drawFullBarSegments();
+              rpRenderSegList();
+            });
+          });
+        });
+      });
+    }
+
+    function initSegmentEditor(self) {
+      rpRenderSegList();
+
+      document.getElementById('rp-save-segs').addEventListener('click', function() {
+        var rows = document.querySelectorAll('#rp-seg-list .rp-seg-row');
+        var next = [];
+        for (var i = 0; i < rows.length; i++) {
+          var start = parseTimeFloat(rows[i].querySelector('.rp-in').value);
+          var end = parseTimeFloat(rows[i].querySelector('.rp-out').value);
+          if (start === null || end === null) { rpShowSegError('Row ' + (i + 1) + ': use m:ss.s or seconds.'); return; }
+          if (start >= end) { rpShowSegError('Row ' + (i + 1) + ': start must be before end.'); return; }
+          next.push({ start_sec: start, end_sec: end, label: rows[i].querySelector('.rp-label').value.trim() });
+        }
+        next.sort(function(a, b) { return a.start_sec - b.start_sec; });
+        rpSaveSegments(next);
+      });
+
+      document.getElementById('rp-bulk-toggle').addEventListener('click', function() {
+        var el = document.getElementById('rp-bulk');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+      });
+
+      document.getElementById('rp-bulk-apply').addEventListener('click', function() {
+        var raw = document.getElementById('rp-bulk-json').value.trim();
+        var parsed;
+        try { parsed = JSON.parse(raw); } catch (e) { rpShowSegError('Invalid JSON: ' + e.message); return; }
+        if (!Array.isArray(parsed)) { rpShowSegError('Expected a JSON array of {start, end} objects.'); return; }
+        var next = [];
+        for (var i = 0; i < parsed.length; i++) {
+          var s = Number(parsed[i].start !== undefined ? parsed[i].start : parsed[i].start_sec);
+          var e2 = Number(parsed[i].end !== undefined ? parsed[i].end : parsed[i].end_sec);
+          if (!isFinite(s) || !isFinite(e2) || s < 0 || s >= e2) { rpShowSegError('Item ' + i + ': need numeric start < end.'); return; }
+          next.push({ start_sec: s, end_sec: e2, label: parsed[i].label || '' });
+        }
+        next.sort(function(a, b) { return a.start_sec - b.start_sec; });
+        rpSaveSegments(next).then(function(ok) {
+          if (ok) document.getElementById('rp-bulk-json').value = '';
+        });
+      });
+    }
 
     // ===================== INIT =====================
     checkAuth().then(function() { handleRoute(); });

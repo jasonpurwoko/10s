@@ -45,6 +45,7 @@ app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/goals', require('./routes/goals'));
 app.use('/api/videos', require('./routes/videos'));
 app.use('/api/clips', require('./routes/clips'));
+app.use('/api/segments', require('./routes/segments'));
 
 var db = require('./db');
 db.init().then(function() {

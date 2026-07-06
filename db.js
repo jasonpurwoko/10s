@@ -70,6 +70,10 @@ async function init() {
   await pool.execute("CREATE TABLE IF NOT EXISTS clips (\n    id VARCHAR(20) PRIMARY KEY,\n    video_id VARCHAR(20) NOT NULL,\n    title VARCHAR(255) NOT NULL,\n    start_time INT NOT NULL,\n    end_time INT NOT NULL,\n    notes TEXT,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE\n  )");
 
   await pool.execute("CREATE TABLE IF NOT EXISTS clip_comments (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    clip_id VARCHAR(20) NOT NULL,\n    text TEXT NOT NULL,\n    author VARCHAR(100) NOT NULL DEFAULT 'Anonymous',\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (clip_id) REFERENCES clips(id) ON DELETE CASCADE\n  )");
+
+  // Rally segments: ordered active-play intervals within a video; gaps between
+  // them are dead time that the Rally Player skips.
+  await pool.execute("CREATE TABLE IF NOT EXISTS rally_segments (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    video_id VARCHAR(20) NOT NULL,\n    idx INT NOT NULL,\n    start_sec DECIMAL(10,3) NOT NULL,\n    end_sec DECIMAL(10,3) NOT NULL,\n    label VARCHAR(255) DEFAULT '',\n    FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE\n  )");
 }
 
 module.exports = { pool: pool, init: init };
