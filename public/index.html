@@ -1301,27 +1301,73 @@
       });
     }
 
+    // Videos are uploaded in small chunks so hosting proxies with request-body
+    // caps (which kill big multipart POSTs as a "network error") never see a
+    // large request. Each chunk is retried a couple of times on failure.
+    var UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024;
+
     function uploadVideosWithProgress(sessionId, files, onProgress) {
-      return new Promise(function(resolve, reject) {
-        var fd = new FormData();
-        fd.append('sessionId', sessionId);
-        files.forEach(function(f) { fd.append('videos', f); });
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/videos');
-        xhr.upload.onprogress = function(e) {
-          if (e.lengthComputable && onProgress) onProgress(e.loaded, e.total);
-        };
-        xhr.onload = function() {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try { resolve(JSON.parse(xhr.responseText)); } catch (err) { resolve([]); }
-          } else {
-            var msg = 'Upload failed';
-            try { msg = JSON.parse(xhr.responseText).error || msg; } catch (e) {}
-            reject({ error: msg });
-          }
-        };
-        xhr.onerror = function() { reject({ error: 'Upload failed (network error)' }); };
-        xhr.send(fd);
+      var totalBytes = files.reduce(function(a, f) { return a + f.size; }, 0);
+      var doneBytes = 0;
+      var results = [];
+      var chain = Promise.resolve();
+      files.forEach(function(f) {
+        chain = chain.then(function() {
+          return uploadOneChunked(sessionId, f, function(sentOfFile) {
+            if (onProgress) onProgress(doneBytes + sentOfFile, totalBytes);
+          });
+        }).then(function(video) {
+          doneBytes += f.size;
+          results.push(video);
+        });
+      });
+      return chain.then(function() { return results; });
+    }
+
+    function uploadOneChunked(sessionId, file, onSent) {
+      var totalChunks = Math.max(1, Math.ceil(file.size / UPLOAD_CHUNK_SIZE));
+      return api.post('/api/videos/chunked/init', {
+        sessionId: sessionId,
+        name: file.name,
+        size: file.size,
+        mimeType: file.type || 'video/mp4',
+        totalChunks: totalChunks
+      }).then(function(init) {
+        if (!init || init.error) throw (init || { error: 'Upload failed' });
+        var p = Promise.resolve();
+        for (var i = 0; i < totalChunks; i++) {
+          (function(idx) {
+            p = p.then(function() { return sendChunk(init.uploadId, idx, file, onSent, 0); });
+          })(i);
+        }
+        return p.then(function() {
+          return api.post('/api/videos/chunked/' + init.uploadId + '/complete', {});
+        }).then(function(video) {
+          if (!video || video.error) throw (video || { error: 'Upload failed' });
+          return video;
+        });
+      });
+    }
+
+    function sendChunk(uploadId, idx, file, onSent, attempt) {
+      var start = idx * UPLOAD_CHUNK_SIZE;
+      var blob = file.slice(start, Math.min(file.size, start + UPLOAD_CHUNK_SIZE));
+      return fetch('/api/videos/chunked/' + uploadId + '/' + idx, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: blob
+      }).then(function(r) {
+        if (!r.ok) {
+          return r.json().catch(function() { return {}; }).then(function(j) {
+            throw { error: j.error || ('Upload failed (chunk ' + (idx + 1) + ', HTTP ' + r.status + ')'), status: r.status };
+          });
+        }
+        if (onSent) onSent(start + blob.size);
+      }).catch(function(err) {
+        // Retry transient failures; 4xx responses are permanent (bad request/auth)
+        var permanent = err && err.status >= 400 && err.status < 500;
+        if (!permanent && attempt < 2) return sendChunk(uploadId, idx, file, onSent, attempt + 1);
+        throw (err && err.error) ? err : { error: 'Upload failed (network error)' };
       });
     }
 
